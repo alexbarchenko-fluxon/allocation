@@ -296,7 +296,7 @@ function PositionsPageInner() {
               <TabsContent value="positions">
                 {sections.length === 0
                   ? <SearchEmpty query={search} />
-                  : <PositionsTable sections={sections} onRowClick={onRowClick} selectedId={selected} />}
+                  : <PositionsTable sections={sections} onRowClick={onRowClick} selectedId={selected} onRowClose={setCloseRow} />}
               </TabsContent>
 
               <TabsContent value="needs">

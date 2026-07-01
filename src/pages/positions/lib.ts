@@ -21,11 +21,15 @@ export interface PosRow {
   noReq: number;
   age: string;
   people: { name: string; loc: string }[];
+  locs: { loc: string; n: number }[];   // location split across non-closed positions
 }
 
 function rowFor(role: Role, mk: string, c: Cell): PosRow {
   const people = cItems(c).filter((p) => (p.status === "started" || p.status === "accepted") && p.person)
     .map((p) => ({ name: p.person!.name, loc: p.person!.loc }));
+  const locMap: Record<string, number> = {};
+  cItems(c).filter((p) => p.status !== "closed").forEach((p) => { if (p.loc) locMap[p.loc] = (locMap[p.loc] || 0) + 1; });
+  const locs = Object.entries(locMap).map(([loc, n]) => ({ loc, n }));
   return {
     id: cellKey(role.title, mk),
     title: role.title, label: role.label, chip: role.chip, dept: role.dept, mk,
@@ -35,6 +39,7 @@ function rowFor(role: Role, mk: string, c: Cell): PosRow {
     closed: cClosedCount(c), noReq: cNoReq(c),
     age: openAgeLabel(c),
     people,
+    locs,
   };
 }
 

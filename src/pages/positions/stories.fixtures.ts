@@ -28,6 +28,9 @@ export function makeRow(title: string, mk: string): PosRow {
   const people = cItems(c)
     .filter((p) => (p.status === 'started' || p.status === 'accepted') && p.person)
     .map((p) => ({ name: p.person!.name, loc: p.person!.loc }))
+  const locMap: Record<string, number> = {}
+  cItems(c).filter((p) => p.status !== 'closed').forEach((p) => { if (p.loc) locMap[p.loc] = (locMap[p.loc] || 0) + 1 })
+  const locs = Object.entries(locMap).map(([loc, n]) => ({ loc, n }))
   return {
     id: cellKey(title, mk),
     title, label: role.label, chip: role.chip, dept: role.dept, mk,
@@ -40,6 +43,7 @@ export function makeRow(title: string, mk: string): PosRow {
     noReq: cNoReq(c),
     age: openAgeLabel(c),
     people,
+    locs,
   }
 }
 

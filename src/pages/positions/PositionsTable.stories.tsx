@@ -7,7 +7,10 @@ const meta: Meta<typeof PositionsTable> = {
   component: PositionsTable,
   parameters: { layout: 'padded' },
   tags: ['autodocs'],
-  argTypes: { onRowClick: { action: 'row-click' } },
+  argTypes: {
+    onRowClick: { action: 'row-click' },
+    onRowClose: { action: 'row-close' },
+  },
   decorators: [
     (Story) => (
       <div className="w-[960px] max-w-full">

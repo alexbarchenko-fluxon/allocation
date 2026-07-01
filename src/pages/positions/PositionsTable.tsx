@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { StageSeparatorRow } from '@/components/deals/table/StageSeparatorRow'
@@ -11,10 +12,31 @@ const COLUMNS = [
   { id: 'month', label: 'Target month', center: false },
   { id: 'headcount', label: 'Headcount', center: true },
   { id: 'status', label: 'Status', center: false },
+  { id: 'location', label: 'Location', center: false },
   { id: 'people', label: 'People', center: false },
   { id: 'age', label: 'Open for', center: false },
+  { id: 'actions', label: '', center: true },
 ]
-const FIXED: Record<string, string> = { headcount: '120px', age: '120px' }
+const FIXED: Record<string, string> = { headcount: '120px', age: '120px', actions: '56px' }
+
+// Location colours are dedicated tokens, deliberately off the status palette.
+const LOC_TOKEN: Record<string, string> = {
+  India: 'var(--loc-india)', Europe: 'var(--loc-europe)', 'North America': 'var(--loc-north-america)',
+}
+
+function LocationCluster({ locs }: { locs: { loc: string; n: number }[] }) {
+  if (locs.length === 0) return <span className="text-sm text-muted-foreground">—</span>
+  return (
+    <div className="flex items-center gap-3 flex-wrap">
+      {locs.map((l) => (
+        <span key={l.loc} className="flex items-center gap-1.5 text-sm text-foreground" title={l.loc}>
+          <span className="h-2 w-2 rounded-full" style={{ background: LOC_TOKEN[l.loc] ?? 'var(--muted-foreground)' }} />
+          {l.n}
+        </span>
+      ))}
+    </div>
+  )
+}
 
 function StatusBadges({ row }: { row: PosRow }) {
   const complete = row.open === 0 && row.pending === 0 && row.filled > 0
@@ -60,9 +82,10 @@ interface Props {
   sections: DeptSection[]
   onRowClick: (row: PosRow) => void
   selectedId?: string | null
+  onRowClose?: (row: PosRow) => void
 }
 
-export function PositionsTable({ sections, onRowClick, selectedId }: Props) {
+export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }: Props) {
   const cols = COLUMNS
   const count = cols.length
 
@@ -133,10 +156,27 @@ export function PositionsTable({ sections, onRowClick, selectedId }: Props) {
                           )
                         case 'status':
                           return <td key={c.id} className={cls}><StatusBadges row={row} /></td>
+                        case 'location':
+                          return <td key={c.id} className={cls}><LocationCluster locs={row.locs} /></td>
                         case 'people':
                           return <td key={c.id} className={cls}><PeopleCluster people={row.people} /></td>
                         case 'age':
                           return <td key={c.id} className={cn(cls, 'text-muted-foreground')}>{row.open + row.pending > 0 ? row.age : '—'}</td>
+                        case 'actions':
+                          return (
+                            <td key={c.id} className={cn(cls, 'text-center')}>
+                              {row.open + row.pending > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); onRowClose?.(row) }}
+                                  className="inline-flex items-center justify-center h-7 w-7 rounded-sm text-muted-foreground transition-colors hover:text-badge-error-fg hover:bg-destructive/10"
+                                  aria-label={`Close ${row.title}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </td>
+                          )
                         default:
                           return null
                       }
