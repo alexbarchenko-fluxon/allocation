@@ -70,6 +70,26 @@ async () => {
     } catch (e) {}
   }
 
+  // 5) Normalise typography for a clean Figma import:
+  //    - force the "Geist" family on every element (Geist only — no fallback, no mono),
+  //    - bake letter-spacing and fractional line-height to whole px. getComputedStyle
+  //      resolves em -> px, so this removes the fractional tracking / line-height that
+  //      html.to.design would otherwise import as "weird" decimal values.
+  for (const el of document.querySelectorAll('body *')) {
+    const cs = getComputedStyle(el);
+    el.style.fontFamily = 'Geist';
+    const ls = cs.letterSpacing;
+    if (ls && ls !== 'normal' && ls.endsWith('px')) {
+      const n = Math.round(parseFloat(ls));
+      el.style.letterSpacing = n === 0 ? 'normal' : n + 'px';
+    }
+    const lh = cs.lineHeight;
+    if (lh && lh.endsWith('px')) {
+      const v = parseFloat(lh);
+      if (Math.round(v) !== v) el.style.lineHeight = Math.round(v) + 'px';
+    }
+  }
+
   const bodyHTML = document.body.innerHTML;
   const lang = document.documentElement.getAttribute('class') || '';
   return { css, bodyHTML, lang };
@@ -84,8 +104,17 @@ def snap_integers(html):
     html = re.sub(r"(width|min-width|max-width|letter-spacing|gap|left|right):\s*([0-9]+\.[0-9]+)px", fix_px, html)
     return html
 
+def force_geist(html):
+    # Resolve font variables to a single literal "Geist" family — no fallback stack,
+    # and collapse the mono family to Geist too, so Figma sees "Geist" only.
+    html = html.replace("var(--font-sans)", '"Geist"').replace("var(--font-mono)", '"Geist"')
+    html = re.sub(r"--font-sans:\s*[^;]+;", '--font-sans:"Geist";', html)
+    html = re.sub(r"--font-mono:\s*[^;]+;", '--font-mono:"Geist";', html)
+    return html
+
 def wrap(css, body, lang):
-    body = snap_integers(body)
+    body = force_geist(snap_integers(body))
+    css = force_geist(css)
     return f"""<!doctype html>
 <html lang="en" class="{lang}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=1512, initial-scale=1">
