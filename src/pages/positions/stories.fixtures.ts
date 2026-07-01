@@ -11,7 +11,7 @@ import { BASE_ROLES } from '@/lib/positions/roles'
 import { TIMELINE, monthFull } from '@/lib/positions/time'
 import {
   unifiedRows, groupByDept, planGrid, recordsForRow, needsReviewItems,
-  deptRollup, roleRollup, rollup, earliestOpenIdx, openRolesFlat,
+  deptRollup, roleRollup, rollup, earliestOpenIdx, openRolesFlat, noteCount,
   type PosRow, type DetailRecord, type ReviewItem, type Rollup, type DeptSection, type GridRow, type OpenRoleRow,
 } from './lib'
 import { type ActivityItem } from '@/lib/positions/seed'
@@ -45,6 +45,7 @@ export function makeRow(title: string, mk: string): PosRow {
     ageDays: daysOpen(c),
     people,
     locs,
+    notes: noteCount(cellKey(title, mk)),
   }
 }
 

@@ -45,7 +45,7 @@ function StatusBadges({ row }: { row: PosRow }) {
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
       {row.pending > 0 && <Badge variant="warning">{row.pending} past due</Badge>}
-      {row.open > 0 && <Badge variant="blue">{row.open} open</Badge>}
+      {row.open > 0 && <Badge variant="outline" className="border-transparent bg-electric-blue-50 text-foreground">{row.open} open</Badge>}
       {row.noReq > 0 && <Badge variant="neutral">{row.noReq} no request</Badge>}
       {row.filled > 0 && (row.open > 0 || row.pending > 0) && <Badge variant="success">{row.filled} filled</Badge>}
     </div>
@@ -55,11 +55,16 @@ function StatusBadges({ row }: { row: PosRow }) {
 function LocationCluster({ locs }: { locs: { loc: string; n: number }[] }) {
   if (locs.length === 0) return <span className="text-sm text-muted-foreground">—</span>
   return (
-    <div className="flex items-center gap-3 flex-wrap">
+    <div className="flex items-center gap-2.5 flex-wrap">
       {locs.map((l) => (
-        <span key={l.loc} className="flex items-center gap-1.5 text-sm text-foreground" title={l.loc}>
-          <span className="h-2 w-2 rounded-full" style={{ background: LOC_TOKEN[l.loc] ?? 'var(--muted-foreground)' }} />
-          {l.n}
+        <span key={l.loc} className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+          <span
+            className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-medium leading-none text-white tabular-nums"
+            style={{ background: LOC_TOKEN[l.loc] ?? 'var(--muted-foreground)' }}
+          >
+            {l.n}
+          </span>
+          {l.loc}
         </span>
       ))}
     </div>
@@ -123,7 +128,7 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
     })
   }
 
-  const cellCls = (idx: number) => cn('h-10 px-3 text-sm', idx > 0 && 'border-l border-border')
+  const cellCls = (idx: number) => cn('h-12 px-3 text-sm', idx > 0 && 'border-l border-border')
 
   return (
     <div className="overflow-hidden rounded-lg border border-border">
@@ -196,7 +201,7 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
                           return (
                             <td key={c.id} className={cn(cls, 'text-center tabular-nums')}>
                               <span className="font-medium text-foreground">{row.filled}</span>
-                              <span className="font-medium text-muted-foreground"> / {row.total}</span>
+                              <span className="font-medium text-muted-foreground">/{row.total}</span>
                             </td>
                           )
                         case 'status':
@@ -210,14 +215,12 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
                         case 'notes':
                           return (
                             <td key={c.id} className={cls}>
-                              <button
-                                type="button"
-                                onClick={(e) => e.stopPropagation()}
-                                aria-label="Notes"
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground/60 transition-colors hover:bg-extended-hover hover:text-foreground"
-                              >
-                                <ClipboardList className="h-4 w-4" />
-                              </button>
+                              {row.notes > 0 && (
+                                <span className="inline-flex items-center gap-1 text-muted-foreground">
+                                  <ClipboardList className="h-4 w-4" />
+                                  <span className="text-xs tabular-nums">{row.notes}</span>
+                                </span>
+                              )}
                             </td>
                           )
                         case 'settings':

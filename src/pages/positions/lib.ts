@@ -23,6 +23,16 @@ export interface PosRow {
   ageDays: number;                       // numeric age for sorting the "Open for" column
   people: { name: string; loc: string }[];
   locs: { loc: string; n: number }[];   // location split across non-closed positions
+  notes: number;                         // note count (mock until a real notes model exists)
+}
+
+// Deterministic mock note counts until a real notes model exists — ~40% of rows
+// show 1–2 notes so the Notes column reads like the design.
+export function noteCount(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  const r = h % 5;
+  return r >= 3 ? r - 2 : 0; // 3 -> 1 note, 4 -> 2 notes, else none
 }
 
 function rowFor(role: Role, mk: string, c: Cell): PosRow {
@@ -42,6 +52,7 @@ function rowFor(role: Role, mk: string, c: Cell): PosRow {
     ageDays: daysOpen(c),
     people,
     locs,
+    notes: noteCount(cellKey(role.title, mk)),
   };
 }
 
