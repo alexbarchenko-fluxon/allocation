@@ -125,36 +125,38 @@ function PositionsPageInner() {
   const reviewExtend = useCallback((it: ReviewItem) => {
     const id = `${it.title}|${it.mk}`
     const row = unifiedRows(cells, '', 'All', false).find((r) => r.id === id)
-    if (row) { setExtendRow(row); setExtendMode('extend') }
+    if (row) { setExtendScope(null); setExtendRow(row); setExtendMode('extend') }
   }, [cells])
   const reviewOpenReq = useCallback((it: ReviewItem) => {
     const id = `${it.title}|${it.mk}`
     const row = unifiedRows(cells, '', 'All', false).find((r) => r.id === id)
-    if (row) { setExtendRow(row); setExtendMode('open') }
+    if (row) { setExtendScope(null); setExtendRow(row); setExtendMode('open') }
   }, [cells])
   const reviewClose = useCallback((it: ReviewItem) => {
     const id = `${it.title}|${it.mk}`
     const row = unifiedRows(cells, '', 'All', false).find((r) => r.id === id)
-    if (row) setCloseRow(row)
+    if (row) { setCloseScope(null); setCloseRow(row) }
   }, [cells])
 
-  // Panel per-record actions
-  const panelExtend = useCallback((recId: string) => {
+  // Panel per-group actions — open the matching wizard scoped to the chosen records.
+  const panelExtend = useCallback((recIds: string[]) => {
     if (!selectedRow) return
-    const r = selectedRow
-    run((cs) => extendOne(cs, r.title, r.mk, recId),
-      `extended 1 × ${r.title}, moved from ${r.monthLabel} to ${monthFull(CURRENT_KEY)}`,
-      { title: 'Extended 1 request', desc: `Moved from ${r.monthLabel} to ${monthFull(CURRENT_KEY)}. No longer past due, recruiting continues.` })
-  }, [selectedRow, run])
-  const panelClose = useCallback((_recId: string) => {
+    setExtendScope(recIds); setExtendMode('extend'); setExtendRow(selectedRow)
+  }, [selectedRow])
+  const panelOpenRequest = useCallback((recIds: string[]) => {
     if (!selectedRow) return
-    setCloseRow(selectedRow)
+    setExtendScope(recIds); setExtendMode('open'); setExtendRow(selectedRow)
+  }, [selectedRow])
+  const panelClose = useCallback((recIds: string[]) => {
+    if (!selectedRow) return
+    setCloseScope(recIds); setCloseRow(selectedRow)
   }, [selectedRow])
 
   // Close wizard
   const [closeRow, setCloseRow] = useState<PosRow | null>(null)
+  const [closeScope, setCloseScope] = useState<string[] | null>(null) // record ids to close, or null = all active
   const closeRecordsList = useMemo(() => (closeRow ? recordsForRow(cells, closeRow.id) : []), [cells, closeRow])
-  const closeActive = closeRecordsList.filter((r) => r.status === 'open' || r.status === 'pending')
+  const closeActive = closeRecordsList.filter((r) => (r.status === 'open' || r.status === 'pending') && (!closeScope || closeScope.includes(r.id)))
   const closeFilled = closeRecordsList.filter((r) => r.status === 'started' || r.status === 'accepted').length
   const onCloseConfirm = useCallback((ids: string[], reason: string) => {
     if (!closeRow) return
@@ -167,16 +169,18 @@ function PositionsPageInner() {
   // Extend / Open wizard (same select-inside-modal pattern as Close)
   const [extendRow, setExtendRow] = useState<PosRow | null>(null)
   const [extendMode, setExtendMode] = useState<'extend' | 'open'>('extend')
+  const [extendScope, setExtendScope] = useState<string[] | null>(null) // record ids, or null = all
   const extendRecordsList = useMemo(() => (extendRow ? recordsForRow(cells, extendRow.id) : []), [cells, extendRow])
   const extendActive = useMemo(() => {
     if (!extendRow) return []
     const pastMonth = isPastDueMonth(extendRow.mk)
     return extendRecordsList.filter((r) =>
-      extendMode === 'open'
+      (extendMode === 'open'
         ? (r.status === 'open' || r.status === 'pending') && r.noReq
-        : (r.status === 'pending' || (pastMonth && r.status === 'open' && !r.noReq))
+        : (r.status === 'pending' || (pastMonth && r.status === 'open' && !r.noReq)))
+      && (!extendScope || extendScope.includes(r.id))
     )
-  }, [extendRow, extendMode, extendRecordsList])
+  }, [extendRow, extendMode, extendRecordsList, extendScope])
   const onExtendConfirm = useCallback((ids: string[], targetISO: string | null) => {
     if (!extendRow) return
     const r = extendRow
@@ -332,9 +336,10 @@ function PositionsPageInner() {
         row={selectedRow}
         records={records}
         isOpen={!!selectedRow}
-        onClose={() => { setSelectedRow(null); setSelected(null) }}
+        onDismiss={() => { setSelectedRow(null); setSelected(null) }}
         onExtend={panelExtend}
-        onCloseRecord={panelClose}
+        onOpenRequest={panelOpenRequest}
+        onCloseRecords={panelClose}
         onPerson={(name: string) => {
           const match = MOCK_PEOPLE.find((p) => p.name === name)
           if (match) navigate(`/people?panel=${match.id}`)
@@ -348,7 +353,7 @@ function PositionsPageInner() {
 
       <CloseWizard
         open={!!closeRow}
-        onOpenChange={(o) => { if (!o) setCloseRow(null) }}
+        onOpenChange={(o) => { if (!o) { setCloseRow(null); setCloseScope(null) } }}
         title={closeRow?.title ?? ''}
         dept={closeRow?.dept ?? ''}
         monthLabel={closeRow?.monthLabel ?? ''}
@@ -358,7 +363,7 @@ function PositionsPageInner() {
       />
       <ExtendWizard
         open={!!extendRow}
-        onOpenChange={(o) => { if (!o) setExtendRow(null) }}
+        onOpenChange={(o) => { if (!o) { setExtendRow(null); setExtendScope(null) } }}
         title={extendRow?.title ?? ''}
         dept={extendRow?.dept ?? ''}
         monthLabel={extendRow?.monthLabel ?? ''}

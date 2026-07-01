@@ -221,12 +221,20 @@ with sync_playwright() as p:
     except Exception as e: print("all open:", e)
 
     # 12 Detail panel over Plan — a past-due cell (Senior Software Engineer, May 0/3):
-    # shows the red status bar, location split, and Extend/Close per past-due record.
+    # Filled/Open/Past due sections, grouped by location, Extend/Close per group + bulk footer.
     reset(pg)
     try:
         pg.get_by_text(re.compile(r"^0 / 3$")).first.click(timeout=2500); pg.wait_for_timeout(800)
         save(pg, "12_detail_panel_pastdue")
     except Exception as e: print("detail pastdue:", e)
+
+    # 13 Detail panel over Plan — an open (not past-due) cell (Senior Software Engineer, Aug 0/6):
+    # the Open section with grouped locations, per-row Close, and a Close-all footer.
+    reset(pg)
+    try:
+        pg.get_by_text(re.compile(r"^0 / 6$")).first.click(timeout=2500); pg.wait_for_timeout(800)
+        save(pg, "13_detail_panel_open")
+    except Exception as e: print("detail open:", e)
 
     b.close()
 print("DONE")

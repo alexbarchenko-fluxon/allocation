@@ -14,9 +14,10 @@ const meta: Meta<typeof PositionDetailPanel> = {
   tags: ['autodocs'],
   args: { isOpen: true },
   argTypes: {
-    onClose: { action: 'close' },
+    onDismiss: { action: 'dismiss' },
     onExtend: { action: 'extend' },
-    onCloseRecord: { action: 'close-record' },
+    onOpenRequest: { action: 'open-request' },
+    onCloseRecords: { action: 'close-records' },
     onPerson: { action: 'person' },
   },
   // The panel is a slide-in rail; give it a tall flex host so it renders at full height.

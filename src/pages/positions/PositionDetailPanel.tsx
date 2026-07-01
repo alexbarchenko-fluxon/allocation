@@ -1,68 +1,135 @@
-import { X, Trash2, ExternalLink } from 'lucide-react'
+import { useState } from 'react'
+import { X, Trash2, ExternalLink, ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { SidePanelSection } from '@/components/ui/side-panel-section'
+import { cn } from '@/lib/utils'
 import { avatarFor } from '@/lib/positions/avatars'
 import { fmtFull } from '@/lib/positions/time'
 import { isPastDueMonth } from '@/lib/positions/model'
-import { type PosRow } from './lib'
-import { type DetailRecord } from './lib'
+import { type PosRow, type DetailRecord } from './lib'
 
 const EASING = 'cubic-bezier(0.4, 0, 0.2, 1)'
 const SLIDE = '0.35s'
 
-function StatusBadge({ status }: { status: DetailRecord['status'] }) {
-  if (status === 'started') return <Badge variant="success">On staff</Badge>
-  if (status === 'accepted') return <Badge variant="success">Offer accepted</Badge>
-  if (status === 'pending') return <Badge variant="warning">Past due</Badge>
-  if (status === 'closed') return <Badge variant="neutral">Closed</Badge>
-  return <Badge variant="blue">Open</Badge>
+// Location colours are dedicated tokens, deliberately off the status palette.
+const LOC_TOKEN: Record<string, string> = {
+  India: 'var(--loc-india)', Europe: 'var(--loc-europe)', 'North America': 'var(--loc-north-america)',
 }
 
-const LOC_DOT: Record<string, string> = { India: 'var(--loc-india)', Europe: 'var(--loc-europe)', 'North America': 'var(--loc-north-america)' }
+// Status tones map to the same tokens the metric cards use, so the panel and the
+// top-of-page metrics read as one language: teal filled, blue open, amber past due.
+type Tone = 'filled' | 'open' | 'pending' | 'neutral'
+const TONE_BG: Record<Tone, string> = {
+  filled: 'var(--metric-filled)',
+  open: 'var(--electric-blue-600)',
+  pending: 'var(--badge-warning-fg)',
+  neutral: 'var(--muted-foreground)',
+}
 
-function RecordRow({ rec, onExtend, onClose, onPerson }: { rec: DetailRecord; onExtend: () => void; onClose: () => void; onPerson: (name: string) => void }) {
-  const filled = rec.status === 'started' || rec.status === 'accepted'
-  const actionable = rec.status === 'open' || rec.status === 'pending'
+function CountBadge({ n, tone }: { n: number; tone: Tone }) {
   return (
-    <div className="flex flex-col gap-2 py-3 border-b border-border last:border-b-0">
-      {/* Primary line: who/where on the left, status on the right */}
-      <div className="flex items-center justify-between gap-3">
-        {filled && rec.person ? (
-          <button onClick={() => onPerson(rec.person!.name)} className="group flex items-center gap-2 min-w-0 rounded-md -mx-1 px-1 py-0.5 hover:bg-extended-hover transition-colors" title={`View ${rec.person.name} in People`}>
-            <img src={avatarFor(rec.person.name)} alt={rec.person.name} className="h-6 w-6 rounded-full object-cover shrink-0" />
-            <span className="text-sm font-medium text-foreground truncate group-hover:underline">{rec.person.name}</span>
-            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-          </button>
-        ) : (
-          <span className="flex items-center gap-2 min-w-0">
-            <span className="h-2 w-2 rounded-full shrink-0" style={{ background: LOC_DOT[rec.loc] || 'var(--muted-foreground)' }} />
-            <span className="text-sm font-medium text-foreground truncate">{rec.loc}</span>
+    <span
+      className="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-medium text-primary-foreground tabular-nums"
+      style={{ background: TONE_BG[tone] }}
+    >
+      {n}
+    </span>
+  )
+}
+
+// Filled-red destructive icon button — matches the Figma per-row Close.
+function CloseIconBtn({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className="flex h-8 w-8 items-center justify-center rounded-md bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90"
+    >
+      <Trash2 className="h-4 w-4" />
+    </button>
+  )
+}
+
+// Collapsible status section. Empty sections show a count of 0 and don't expand.
+function Section({ label, count, tone, defaultOpen, children }: {
+  label: string; count: number; tone: Tone; defaultOpen: boolean; children?: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  const empty = count === 0
+  return (
+    <div className="border-t border-border">
+      <button
+        type="button"
+        onClick={() => !empty && setOpen((o) => !o)}
+        className={cn('flex w-full items-center justify-between px-5 py-4', empty && 'cursor-default')}
+      >
+        <span className="flex items-center gap-1.5">
+          <span className={cn('text-sm font-medium', empty ? 'text-muted-foreground' : 'text-foreground')}>{label}</span>
+          <CountBadge n={count} tone={tone} />
+        </span>
+        {!empty && <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', !open && '-rotate-90')} />}
+      </button>
+      {open && !empty && <div className="px-5 pb-4">{children}</div>}
+    </div>
+  )
+}
+
+// One row per location group (Open / Past due), with a count badge when >1.
+function LocRow({ loc, count, tone, children }: { loc: string; count: number; tone: Tone; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-2 py-2 border-b border-border last:border-b-0">
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: LOC_TOKEN[loc] ?? 'var(--muted-foreground)' }} />
+        <span className="truncate text-sm font-medium text-foreground">{loc}</span>
+        {count > 1 && <CountBadge n={count} tone={tone} />}
+      </span>
+      <span className="flex shrink-0 items-center gap-2">{children}</span>
+    </div>
+  )
+}
+
+function FilledRow({ rec, onPerson }: { rec: DetailRecord; onPerson: (name: string) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-b-0">
+      {rec.person ? (
+        <button
+          onClick={() => onPerson(rec.person!.name)}
+          className="group -mx-1 flex min-w-0 items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-extended-hover"
+          title={`View ${rec.person.name} in People`}
+        >
+          <img src={avatarFor(rec.person.name)} alt={rec.person.name} className="h-6 w-6 shrink-0 rounded-full object-cover" />
+          <span className="flex min-w-0 flex-col text-left">
+            <span className="truncate text-sm font-medium text-foreground group-hover:underline">{rec.person.name}</span>
+            <span className="truncate text-xs text-muted-foreground">Starts {fmtFull(rec.person.start)} · {rec.person.loc}</span>
           </span>
-        )}
-        <StatusBadge status={rec.status} />
+          <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+        </button>
+      ) : (
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: LOC_TOKEN[rec.loc] ?? 'var(--muted-foreground)' }} />
+          <span className="text-sm font-medium text-foreground">{rec.loc}</span>
+        </span>
+      )}
+      <Badge variant="success">{rec.status === 'started' ? 'On staff' : 'Offer accepted'}</Badge>
+    </div>
+  )
+}
+
+function ClosedRow({ rec }: { rec: DetailRecord }) {
+  return (
+    <div className="flex flex-col gap-1 py-2 border-b border-border last:border-b-0">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: LOC_TOKEN[rec.loc] ?? 'var(--muted-foreground)' }} />
+          <span className="text-sm font-medium text-foreground">{rec.loc}</span>
+        </span>
+        <Badge variant="neutral">Closed</Badge>
       </div>
-
-      {/* Secondary line: context */}
-      {filled && rec.person && (
-        <p className="text-xs text-muted-foreground pl-1">Starts {fmtFull(rec.person.start)} · {rec.person.loc}</p>
-      )}
-      {rec.noReq && <p className="text-xs text-muted-foreground pl-1">No hiring request yet. Open one to start recruiting, or close the position.</p>}
-      {rec.status === 'pending' && !rec.noReq && <p className="text-xs text-muted-foreground pl-1">Target start date has passed. Extend moves it forward to the current month, or close it.</p>}
-      {rec.status === 'closed' && rec.closedReason && (
-        <p className="text-xs text-muted-foreground pl-1">{rec.closedReason} {rec.closedBy ? `· ${rec.closedBy}` : ''}{rec.closedTs ? ` · ${rec.closedTs}` : ''}</p>
-      )}
-
-      {/* Actions: grouped, right-aligned, primary action first */}
-      {actionable && (
-        <div className="flex items-center justify-end gap-2 pt-0.5">
-          <Button variant="ghost" size="sm" className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={onClose}><Trash2 className="h-3.5 w-3.5" /> Close</Button>
-          {rec.noReq
-            ? <Button variant="outline" size="sm" className="h-8" onClick={onExtend}>Open request</Button>
-            : rec.status === 'pending'
-            ? <Button size="sm" className="h-8" onClick={onExtend}>Extend request</Button>
-            : null}
-        </div>
+      {rec.closedReason && (
+        <p className="text-xs text-muted-foreground pl-3.5">
+          {rec.closedReason}{rec.closedBy ? ` · ${rec.closedBy}` : ''}{rec.closedTs ? ` · ${rec.closedTs}` : ''}
+        </p>
       )}
     </div>
   )
@@ -72,99 +139,110 @@ interface Props {
   row: PosRow | null
   records: DetailRecord[]
   isOpen: boolean
-  onClose: () => void
-  onExtend: (recId: string) => void
-  onCloseRecord: (recId: string) => void
+  onDismiss: () => void
+  onExtend: (recIds: string[]) => void        // past-due records → extend wizard
+  onOpenRequest: (recIds: string[]) => void   // no-request records → open-request wizard
+  onCloseRecords: (recIds: string[]) => void  // → close wizard (reason required)
   onPerson: (name: string) => void
 }
 
-export function PositionDetailPanel({ row, records, isOpen, onClose, onExtend, onCloseRecord, onPerson }: Props) {
+export function PositionDetailPanel({ row, records, isOpen, onDismiss, onExtend, onOpenRequest, onCloseRecords, onPerson }: Props) {
   const monthPastDue = row ? isPastDueMonth(row.mk) : false
-  // In a past month, open items are past due. Normalise so the UI treats them as such.
+  // In a past month, open items (with a request) are past due — normalise so they land in the right section.
   const recs = records.map((r) => (monthPastDue && r.status === 'open' && !r.noReq ? { ...r, status: 'pending' as const } : r))
-  const onStaff = recs.filter((r) => r.status === 'started').length
-  const accepted = recs.filter((r) => r.status === 'accepted').length
+
   const filled = recs.filter((r) => r.status === 'started' || r.status === 'accepted')
-  const active = recs.filter((r) => r.status === 'open' || r.status === 'pending')
-  const pastDue = recs.filter((r) => r.status === 'pending').length
-  const openN = recs.filter((r) => r.status === 'open').length
+  const openRecs = recs.filter((r) => r.status === 'open')
+  const pastDue = recs.filter((r) => r.status === 'pending')
   const closed = recs.filter((r) => r.status === 'closed')
 
-  // Location split across active+filled (not closed)
-  const locSplit: Record<string, number> = {}
-  records.filter((r) => r.status !== 'closed').forEach((r) => { locSplit[r.loc] = (locSplit[r.loc] || 0) + 1 })
-  const LOC_TOKEN: Record<string, string> = { India: 'var(--loc-india)', Europe: 'var(--loc-europe)', 'North America': 'var(--loc-north-america)' }
+  // Open groups split by location AND request state — no-request positions get a
+  // different action ("Open request") than plain open ones (Close only).
+  const openGroups = (() => {
+    const m = new Map<string, { loc: string; noReq: boolean; items: DetailRecord[] }>()
+    for (const r of openRecs) {
+      const key = `${r.loc}|${!!r.noReq}`
+      if (!m.has(key)) m.set(key, { loc: r.loc, noReq: !!r.noReq, items: [] })
+      m.get(key)!.items.push(r)
+    }
+    return [...m.values()]
+  })()
 
-  const segs = [
-    { label: 'on staff', n: onStaff, c: 'var(--electric-blue-600)' },
-    { label: 'offer accepted', n: accepted, c: 'var(--badge-success-fg)' },
-    { label: 'past due', n: pastDue, c: 'var(--badge-warning-fg)' },
-    { label: 'open', n: openN, c: 'var(--electric-blue-100)' },
-  ].filter((s) => s.n > 0)
-  const segTotal = segs.reduce((a, s) => a + s.n, 0) || 1
+  const pastDueGroups = (() => {
+    const m = new Map<string, DetailRecord[]>()
+    for (const r of pastDue) { if (!m.has(r.loc)) m.set(r.loc, []); m.get(r.loc)!.push(r) }
+    return [...m.entries()].map(([loc, items]) => ({ loc, items }))
+  })()
+
+  const closeableIds = [...openRecs, ...pastDue].map((r) => r.id)
+  const pastDueIds = pastDue.map((r) => r.id)
 
   return (
     <div
-      className="overflow-hidden flex-shrink-0 h-full"
+      className="h-full flex-shrink-0 overflow-hidden"
       style={{ width: isOpen ? 420 : 0, marginLeft: isOpen ? 0 : -10, transition: `width ${SLIDE} ${EASING}, margin-left ${SLIDE} ${EASING}` }}
     >
-      <div className="w-[420px] h-full bg-background border border-border rounded-lg shadow-sm flex flex-col overflow-hidden">
+      <div className="flex h-full w-[420px] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-sm">
         {/* Header */}
-        <div className="px-5 py-4 flex items-start justify-between gap-2 border-b border-border">
-          <div className="flex flex-col gap-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-semibold tracking-tight truncate">{row?.title}</span>
-            </div>
+        <div className="flex shrink-0 items-start justify-between gap-2 border-b border-border px-5 py-4">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="truncate text-lg font-semibold tracking-tight">{row?.title}</span>
             <span className="text-sm text-muted-foreground">{row?.monthLabel} · {row?.dept}</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0 text-muted-foreground hover:text-foreground"><X /></Button>
+          <Button variant="ghost" size="icon" onClick={onDismiss} className="shrink-0 text-muted-foreground hover:text-foreground"><X /></Button>
         </div>
 
-        {/* Summary: status bar + location split */}
-        <div className="px-5 py-4 border-b border-border flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex h-2 w-full overflow-hidden rounded-full bg-muted">
-              {segs.map((s) => <span key={s.label} style={{ flex: s.n / segTotal, background: s.c }} />)}
-            </div>
-            <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
-              {segs.map((s) => (
-                <span key={s.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span className="h-2 w-2 rounded-full" style={{ background: s.c }} />{s.n} {s.label}
-                </span>
-              ))}
-            </div>
-          </div>
-          {Object.keys(locSplit).length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-muted-foreground">Location split</span>
-              <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
-                {Object.entries(locSplit).map(([loc, n]) => (
-                  <span key={loc} className="flex items-center gap-1.5 text-sm text-foreground">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: LOC_TOKEN[loc] ?? 'var(--muted-foreground)' }} />{loc} {n}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Sections (keyed by row so the accordion resets when a different position is opened) */}
+        <div key={row?.id} className="scrollbar-minimal flex-1 overflow-y-auto">
+          <Section label="Filled" count={filled.length} tone="filled" defaultOpen={filled.length > 0}>
+            {filled.map((r) => <FilledRow key={r.id} rec={r} onPerson={onPerson} />)}
+          </Section>
 
-        <div className="overflow-y-auto scrollbar-minimal flex-1">
-          <SidePanelSection title={`Filled (${filled.length})`} defaultOpen>
-            {filled.length ? filled.map((r) => <RecordRow key={r.id} rec={r} onExtend={() => onExtend(r.id)} onClose={() => onCloseRecord(r.id)} onPerson={onPerson} />)
-              : <p className="text-sm text-muted-foreground pb-2">None filled yet.</p>}
-          </SidePanelSection>
+          <Section label="Open" count={openRecs.length} tone="open" defaultOpen={openRecs.length > 0}>
+            <p className="mb-1 text-xs leading-4 text-muted-foreground">Actively recruiting via Spark. Close a request if the role's no longer needed.</p>
+            {openGroups.map((g) => (
+              <LocRow key={`${g.loc}|${g.noReq}`} loc={g.loc} count={g.items.length} tone="open">
+                <CloseIconBtn onClick={() => onCloseRecords(g.items.map((i) => i.id))} label={`Close ${g.loc} ${row?.title ?? ''}`} />
+                {g.noReq && (
+                  <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(g.items.map((i) => i.id))}>Open request</Button>
+                )}
+              </LocRow>
+            ))}
+          </Section>
 
-          <SidePanelSection title={`Open & past due (${active.length})`} defaultOpen>
-            {active.length ? active.map((r) => <RecordRow key={r.id} rec={r} onExtend={() => onExtend(r.id)} onClose={() => onCloseRecord(r.id)} onPerson={onPerson} />)
-              : <p className="text-sm text-muted-foreground pb-2">No open records.</p>}
-          </SidePanelSection>
+          <Section label="Past due" count={pastDue.length} tone="pending" defaultOpen={pastDue.length > 0}>
+            <p className="mb-1 text-xs leading-4 text-muted-foreground">Target start date has passed. Extend moves it forward to the current month, or close it.</p>
+            {pastDueGroups.map((g) => (
+              <LocRow key={g.loc} loc={g.loc} count={g.items.length} tone="pending">
+                <CloseIconBtn onClick={() => onCloseRecords(g.items.map((i) => i.id))} label={`Close ${g.loc} ${row?.title ?? ''}`} />
+                <Button variant="outline" size="sm" className="h-8" onClick={() => onExtend(g.items.map((i) => i.id))}>Extend request</Button>
+              </LocRow>
+            ))}
+          </Section>
 
           {closed.length > 0 && (
-            <SidePanelSection title={`Closed (${closed.length})`} defaultOpen={false}>
-              {closed.map((r) => <RecordRow key={r.id} rec={r} onExtend={() => {}} onClose={() => {}} onPerson={onPerson} />)}
-            </SidePanelSection>
+            <Section label="Closed" count={closed.length} tone="neutral" defaultOpen={false}>
+              {closed.map((r) => <ClosedRow key={r.id} rec={r} />)}
+            </Section>
           )}
         </div>
+
+        {/* Footer — bulk actions */}
+        {(closeableIds.length > 0 || pastDueIds.length > 0) && (
+          <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border p-4">
+            {closeableIds.length > 0 && (
+              <Button variant="destructive" onClick={() => onCloseRecords(closeableIds)}>
+                <Trash2 className="h-4 w-4" /> Close all
+              </Button>
+            )}
+            {pastDueIds.length > 0 && (
+              <Button onClick={() => onExtend(pastDueIds)}>
+                Extend all requests
+                <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-foreground/20 px-1 text-xs font-medium tabular-nums">{pastDueIds.length}</span>
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
