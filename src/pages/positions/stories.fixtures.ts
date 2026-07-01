@@ -11,8 +11,8 @@ import { BASE_ROLES } from '@/lib/positions/roles'
 import { TIMELINE, monthFull } from '@/lib/positions/time'
 import {
   unifiedRows, groupByDept, planGrid, recordsForRow, needsReviewItems,
-  deptRollup, roleRollup, rollup, earliestOpenIdx, openRolesFlat, noteCount,
-  type PosRow, type DetailRecord, type ReviewItem, type Rollup, type DeptSection, type GridRow, type OpenRoleRow,
+  deptRollup, roleRollup, rollup, earliestOpenIdx, noteCount,
+  type PosRow, type DetailRecord, type ReviewItem, type Rollup, type DeptSection, type GridRow,
 } from './lib'
 import { type ActivityItem } from '@/lib/positions/seed'
 
@@ -60,9 +60,6 @@ export const rollupHeavyBacklog: Rollup = {
 export const tableSectionsOpen: DeptSection[] = groupByDept(unifiedRows(cells, '', 'All', true))
 export const tableSectionsAll: DeptSection[] = groupByDept(unifiedRows(cells, '', 'All', false))
 export const firstRowId: string | undefined = tableSectionsOpen[0]?.rows[0]?.id
-
-// ── PositionsFlatTable (all-open view) ──────────────────────────────────────
-export const flatOpenRows: OpenRoleRow[] = openRolesFlat(cells, '', 'All')
 
 // ── PlanGrid ────────────────────────────────────────────────────────────────
 const planStartIdx = earliestOpenIdx(cells)

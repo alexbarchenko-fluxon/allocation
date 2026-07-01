@@ -11,10 +11,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { makeSeedCells, SEED_ACTIVITY, type ActivityItem } from '@/lib/positions/seed'
 import { type Cells } from '@/lib/positions/model'
 import { TIMELINE, monthFull, CURRENT_KEY } from '@/lib/positions/time'
-import { unifiedRows, groupByDept, recordsForRow, needsReviewItems, needsReviewCount, planGrid, rollup, earliestOpenIdx, deptRollup, roleRollup, openRolesFlat, type PosRow, type ReviewItem } from './positions/lib'
+import { unifiedRows, groupByDept, recordsForRow, needsReviewItems, needsReviewCount, planGrid, rollup, earliestOpenIdx, deptRollup, roleRollup, type PosRow, type ReviewItem } from './positions/lib'
 import { PositionsTable } from './positions/PositionsTable'
-import { PositionsFlatTable } from './positions/PositionsFlatTable'
-import { SegmentedControl } from '@/components/ui/segmented-control'
 import { PositionDetailPanel } from './positions/PositionDetailPanel'
 import { NeedsReview } from './positions/NeedsReview'
 import { PlanGrid } from './positions/PlanGrid'
@@ -44,8 +42,6 @@ function PositionsPageInner() {
   const [tab, setTab] = useState('plan')
   const [posDept, setPosDept] = useState<string[]>([])
   const [posStatus, setPosStatus] = useState<string[]>([])
-  // Positions tab: "month" = role×month rows grouped by dept; "role" = flat all-open list.
-  const [posGroupBy, setPosGroupBy] = useState<'month' | 'role'>('month')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
 
@@ -69,12 +65,6 @@ function PositionsPageInner() {
     },
     [cells, search, posDept, posStatus],
   )
-  // Flat "all open positions" view: one row per role, aggregated across months.
-  const flatRows = useMemo(() => {
-    let rows = openRolesFlat(cells, search, 'All')
-    if (posDept.length) rows = rows.filter((r) => posDept.includes(r.dept))
-    return rows
-  }, [cells, search, posDept])
   const allReviewItems = useMemo(() => needsReviewItems(cells), [cells])
   const [reviewDept, setReviewDept] = useState<string[]>([])
   const [reviewKind, setReviewKind] = useState<string[]>([])
@@ -274,17 +264,10 @@ function PositionsPageInner() {
                 )}
                 {tab === 'positions' && (
                   <div className="flex items-center gap-3">
-                    <SegmentedControl
-                      value={posGroupBy}
-                      onValueChange={(v) => setPosGroupBy(v as 'month' | 'role')}
-                      options={[{ value: 'month', label: 'By month' }, { value: 'role', label: 'All open' }]}
-                    />
                     <FilterMultiSelect label="Department" value={posDept} onChange={setPosDept}
                       options={DEPTS.filter((d) => d !== 'All').map((d) => ({ value: d, label: d }))} />
-                    {posGroupBy === 'month' && (
-                      <FilterMultiSelect label="Status" value={posStatus} onChange={setPosStatus}
-                        options={[{ value: 'filled', label: 'Filled' }, { value: 'open', label: 'Open' }, { value: 'pending', label: 'Past due' }, { value: 'noreq', label: 'No request' }]} />
-                    )}
+                    <FilterMultiSelect label="Status" value={posStatus} onChange={setPosStatus}
+                      options={[{ value: 'filled', label: 'Filled' }, { value: 'open', label: 'Open' }, { value: 'pending', label: 'Past due' }, { value: 'noreq', label: 'No request' }]} />
                     <Input
                       placeholder="Search roles"
                       value={search}
@@ -315,13 +298,9 @@ function PositionsPageInner() {
               </TabsContent>
 
               <TabsContent value="positions">
-                {posGroupBy === 'role'
-                  ? (flatRows.length === 0
-                      ? <SearchEmpty query={search} />
-                      : <PositionsFlatTable rows={flatRows} onRowClick={(r) => { setSearch(r.title); setPosGroupBy('month') }} />)
-                  : (sections.length === 0
-                      ? <SearchEmpty query={search} />
-                      : <PositionsTable sections={sections} onRowClick={onRowClick} selectedId={selected} onRowClose={(r) => { setCloseScope(null); setCloseRow(r) }} />)}
+                {sections.length === 0
+                  ? <SearchEmpty query={search} />
+                  : <PositionsTable sections={sections} onRowClick={onRowClick} selectedId={selected} onRowClose={(r) => { setCloseScope(null); setCloseRow(r) }} />}
               </TabsContent>
 
               <TabsContent value="needs">
