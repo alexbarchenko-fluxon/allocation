@@ -220,5 +220,13 @@ with sync_playwright() as p:
         save(pg, "11_positions_all_open")
     except Exception as e: print("all open:", e)
 
+    # 12 Detail panel over Plan — a past-due cell (Senior Software Engineer, May 0/3):
+    # shows the red status bar, location split, and Extend/Close per past-due record.
+    reset(pg)
+    try:
+        pg.get_by_text(re.compile(r"^0 / 3$")).first.click(timeout=2500); pg.wait_for_timeout(800)
+        save(pg, "12_detail_panel_pastdue")
+    except Exception as e: print("detail pastdue:", e)
+
     b.close()
 print("DONE")
