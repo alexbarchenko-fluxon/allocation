@@ -1,0 +1,364 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fluxon Brand Tokens - Exported from Figma */
+@layer base {
+  :root {
+    /* Color tokens - OKLCH format */
+    --primary: oklch(0.489 0.288 264.885);
+    --primary-foreground: oklch(0.985 0.002 247.839);
+    
+    --secondary: oklch(0.967 0.003 264.542);
+    --secondary-foreground: oklch(0.210 0.032 264.665);
+    
+    --accent: oklch(0.943 0.027 276.844);
+    --accent-foreground: oklch(0.210 0.032 264.665);
+    
+    --muted: oklch(0.967 0.003 264.542);
+    --muted-foreground: oklch(0.446 0.026 256.802);
+    
+    --destructive: oklch(0.637 0.208 25.331);
+    --destructive-foreground: oklch(0.985 0.002 247.839);
+    
+    --background: oklch(1.000 0.000 0.000);
+    --foreground: oklch(0.210 0.032 264.665);
+    
+    --card: oklch(1.000 0.000 0.000);
+    --card-foreground: oklch(0.130 0.027 261.692);
+    
+    --popover: oklch(1.000 0.000 0.000);
+    --popover-foreground: oklch(0.130 0.027 261.692);
+    
+    --border: oklch(0.928 0.006 264.531);
+    --input: oklch(0.928 0.006 264.531);
+    --input-bg: oklch(1.000 0.000 0.000);
+    --ring: oklch(0.928 0.006 264.531);
+    --modal-scrim: 17 24 39;
+    
+    /* Chart colors */
+    --chart-1: oklch(0.416 0.242 265.043);
+    --chart-2: oklch(0.600 0.104 184.704);
+    --chart-3: oklch(0.398 0.066 227.392);
+    --chart-4: oklch(0.837 0.164 84.429);
+    --chart-5: oklch(0.769 0.165 70.080);
+    
+    /* Electric blue shades — Brand collection (Figma) */
+    --electric-blue-25:  #F3F5FF;
+    --electric-blue-50:  oklch(0.950 0.020 265);
+    --electric-blue-100: oklch(0.920 0.035 265);
+    --electric-blue-600: oklch(0.400 0.22 265);
+    --electric-blue-700: oklch(0.300 0.18 265);
+
+    /* Location / country hues — kept OFF the status palette (no green/blue/amber/red)
+       so geography never reads as a status. Purple / indigo / rose. */
+    --loc-india:         oklch(0.560 0.200 300);   /* violet  */
+    --loc-europe:        oklch(0.520 0.170 285);   /* indigo-violet, clear of open-blue */
+    --loc-north-america: oklch(0.600 0.180 350);   /* rose    */
+
+
+    /* Extended hover — Theme collection aliases (Figma: extended/extended) */
+    --extended-hover-light: var(--electric-blue-25);
+    --extended-hover-dark:  var(--accent);
+
+    /* Extended hover — Mode token: light mode uses light alias */
+    --extended-hover: var(--extended-hover-light);
+    
+    /* Sidebar tokens */
+    --sidebar: oklch(0.967 0.003 264.542);
+    --sidebar-foreground: oklch(0.551 0.023 264.364);
+    --sidebar-primary: oklch(0.216 0.006 56.043);
+    --sidebar-primary-foreground: oklch(0.985 0.002 247.839);
+    --sidebar-accent: oklch(0.967 0.003 264.542);
+    --sidebar-accent-foreground: oklch(0.210 0.032 264.665);
+    --sidebar-border: oklch(0.872 0.009 258.338);
+    --sidebar-ring: oklch(0.714 0.019 261.325);
+    
+    /* Badge status tokens — Figma Theme collection (badges group)
+     * Light mode: stroke = bg (invisible border), fg = Tailwind 700 shade
+     * Dark mode: bg = stroke = Tailwind 600-700 solid, fg = white */
+
+    /* success — green/100 bg+stroke, green/700 text */
+    --badge-success-bg:     #dcfce7;
+    --badge-success-stroke: #dcfce7;
+    --badge-success-fg:     #15803d;
+    /* metric legend: Figma node 205-25961 uses teal/700 for the Filled segment+dot */
+    --metric-filled:        #0f766e;
+    /* warning — orange/100 bg+stroke, orange/700 text */
+    --badge-warning-bg:     #ffedd5;
+    --badge-warning-stroke: #ffedd5;
+    --badge-warning-fg:     #c2410c;
+    /* error — red/100 bg+stroke, red/700 text */
+    --badge-error-bg:     #fee2e2;
+    --badge-error-stroke: #fee2e2;
+    --badge-error-fg:     #b91c1c;
+    /* neutral — gray/100 bg+stroke, gray/700 text */
+    --badge-neutral-bg:     #f3f4f6;
+    --badge-neutral-stroke: #f3f4f6;
+    --badge-neutral-fg:     #374151;
+    /* blue — electric-blue/50 bg+stroke, foreground text */
+    --badge-blue-bg:     var(--electric-blue-50);
+    --badge-blue-stroke: var(--electric-blue-50);
+    --badge-blue-fg:     var(--foreground);
+
+    /* Timeline row background — muted at 50 % opacity (Figma: base/muted @ 50 %)
+     * Defined as a standalone variable so it can be used via inline style, which
+     * bypasses Tailwind's rgb() opacity-modifier wrapper (incompatible with oklch). */
+    --timeline-row-bg: oklch(0.967 0.003 264.542 / 0.5);
+    --timeline-weekend-bg: oklch(0.967 0.003 264.542 / 0.3);
+
+    /* Allocation timeline block tokens (Figma: 4. Custom / allocation-timeline)
+     * Three semantic states mirror the badge token pattern: light bg + stroke + fg.
+     * Dark overrides below convert transparent-tint backgrounds to solid dark surfaces. */
+    /* assigned — fully/correctly allocated */
+    --timeline-assigned-bg:       #ffffff;
+    --timeline-assigned-stroke:   #e5e7eb;
+    --timeline-assigned-fg:       #111827;
+    /* misallocation — over- or under-allocated */
+    --timeline-misalloc-bg:       #ffedd5;
+    --timeline-misalloc-stroke:   #fed7aa;
+    --timeline-misalloc-fg:       #c2410c;
+    /* unassigned — future gap with no project */
+    --timeline-unassigned-bg:     #fee2e2;
+    --timeline-unassigned-stroke: #fecaca;
+    --timeline-unassigned-fg:     #b91c1c;
+    /* OOO diagonal stripe colour — per block-type (Figma tokens) */
+    --timeline-ooo-stripe:           #d1d5db;   /* legacy fallback */
+    --timeline-assigned-ooo:         #d1d5db;   /* gray-300  */
+    --timeline-misalloc-ooo:         #fdba74;   /* orange-300 */
+    --timeline-unassigned-ooo:       #fca5a5;   /* red-300   */
+
+    /* Border radius tokens */
+    --radius: 0.5rem;
+    --radius-xs: 0.125rem;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.625rem;
+    --radius-xl: 0.875rem;
+    --radius-2xl: 1rem;
+    --radius-3xl: 1.5rem;
+    --radius-4xl: 2rem;
+    
+    /* Typography tokens */
+    --font-sans: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, monospace;
+  }
+
+  .dark {
+    --timeline-row-bg: oklch(0.278 0.030 256.848 / 0.5);
+    --timeline-weekend-bg: oklch(0.278 0.030 256.848 / 0.3);
+
+    /* Allocation timeline block tokens — dark mode
+     * Matches Figma: assigned = elevated dark surface; misallocation and
+     * unassigned use vibrant solid colours (orange-600 / red-600) with
+     * white foreground — same pattern as badge dark tokens (bg = stroke,
+     * fg = gray/50). */
+    --timeline-assigned-bg:       #1e293b;
+    --timeline-assigned-stroke:   #334155;
+    --timeline-assigned-fg:       #f1f5f9;
+    --timeline-misalloc-bg:       #ea580c;
+    --timeline-misalloc-stroke:   #ea580c;
+    --timeline-misalloc-fg:       #f9fafb;
+    --timeline-unassigned-bg:     #dc2626;
+    --timeline-unassigned-stroke: #dc2626;
+    --timeline-unassigned-fg:     #f9fafb;
+    --timeline-ooo-stripe:           rgba(255,255,255,0.20);  /* legacy fallback */
+    --timeline-assigned-ooo:         rgba(255,255,255,0.22);
+    --timeline-misalloc-ooo:         #fb923c;   /* orange-400 */
+    --timeline-unassigned-ooo:       #f87171;   /* red-400    */
+
+    /* Dark mode overrides */
+    --primary: oklch(0.928 0.006 264.531);
+    --primary-foreground: oklch(0.210 0.032 264.665);
+    
+    --secondary: oklch(0.278 0.030 256.848);
+    --secondary-foreground: oklch(0.985 0.002 247.839);
+    
+    --accent: oklch(0.373 0.031 259.733);
+    --accent-foreground: oklch(0.985 0.002 247.839);
+    
+    --muted: oklch(0.278 0.030 256.848);
+    --muted-foreground: oklch(0.714 0.019 261.325);
+    
+    --destructive: oklch(0.711 0.166 22.216);
+    --destructive-foreground: oklch(0.985 0.002 247.839);
+    
+    --background: oklch(0.062 0.022 264.000);
+    --foreground: oklch(0.985 0.002 247.839);
+    
+    --card: oklch(0.210 0.032 264.665);
+    --card-foreground: oklch(0.985 0.002 247.839);
+    
+    --popover: oklch(0.278 0.030 256.848);
+    --popover-foreground: oklch(0.985 0.002 247.839);
+    
+    --border: oklch(1.000 0.000 0.000 / 0.1);
+    --input: oklch(1.000 0.000 0.000 / 0.15);
+    --input-bg: oklch(1.000 0.000 0.000 / 0.045);
+    --ring: oklch(0.551 0.023 264.364);
+    --modal-scrim: 249 250 251;
+    
+    /* Badge status tokens — dark mode (Figma Mode collection, dark aliases) */
+    /* success — green/700 */
+    --badge-success-bg:     #15803d;
+    --badge-success-stroke: #15803d;
+    --badge-success-fg:     #ffffff;
+    /* metric legend filled, dark: lighter teal for contrast */
+    --metric-filled:        #2dd4bf;
+    /* warning — orange/600 */
+    --badge-warning-bg:     #ea580c;
+    --badge-warning-stroke: #ea580c;
+    --badge-warning-fg:     #ffffff;
+    /* error — red/600 */
+    --badge-error-bg:     #dc2626;
+    --badge-error-stroke: #dc2626;
+    --badge-error-fg:     #ffffff;
+    /* neutral — gray/700 */
+    --badge-neutral-bg:     #374151;
+    --badge-neutral-stroke: #374151;
+    --badge-neutral-fg:     #ffffff;
+    /* blue — electric-blue/100 bg+stroke, accent-foreground-light text */
+    --badge-blue-bg:     oklch(0.920 0.035 265);
+    --badge-blue-stroke: oklch(0.920 0.035 265);
+    --badge-blue-fg:     oklch(0.210 0.032 264.665);
+
+    /* Extended hover — Mode token: dark mode uses dark alias */
+    --extended-hover: var(--extended-hover-dark);
+
+    /* Dark mode chart colors */
+    --chart-1: oklch(0.416 0.242 265.043);
+    --chart-2: oklch(0.696 0.149 162.480);
+    --chart-3: oklch(0.769 0.165 70.080);
+    --chart-4: oklch(0.627 0.233 303.900);
+    --chart-5: oklch(0.645 0.215 16.439);
+
+    /* Location / country hues — dark variants (a touch brighter for contrast) */
+    --loc-india:         oklch(0.680 0.190 300);
+    --loc-europe:        oklch(0.640 0.160 285);
+    --loc-north-america: oklch(0.700 0.170 350);
+
+    /* Dark mode sidebar */
+    --sidebar: oklch(0.210 0.032 264.665);
+    --sidebar-foreground: oklch(0.985 0.002 247.839);
+    --sidebar-primary: oklch(0.489 0.288 264.885);
+    --sidebar-primary-foreground: oklch(0.985 0.002 247.839);
+    --sidebar-accent: oklch(0.278 0.030 256.848);
+    --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
+    --sidebar-border: oklch(1.000 0.000 0.000 / 0.1);
+    --sidebar-ring: oklch(0.446 0.026 256.802);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+}
+
+/* ── Timeline label fade ─────────────────────────────────────────────────────
+ * Opacity is toggled by adding/removing the `.labels-out` class on the
+ * timeline container via direct DOM manipulation (no React re-render on hide).
+ * The re-render only happens on the fade-in side, after new positions are set.
+ * ──────────────────────────────────────────────────────────────────────────── */
+.allocation-label {
+  opacity: 1;
+  transition: opacity 150ms ease-in-out;
+}
+.labels-out .allocation-label {
+  opacity: 0;
+}
+
+/* ── Minimal scrollbar utility ────────────────────────────────────────────────
+ * Usage: add `scrollbar-minimal` to any overflow container.
+ * Thumb is hidden by default, visible on hover or while `.is-scrolling`
+ * (toggled by the useScrollIndicator hook).
+ * `scrollbar-gutter: stable` prevents layout shift when thumb appears.
+ * ──────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .scrollbar-minimal {
+    /* Firefox — scrollbar-color is animatable in modern Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.4s ease;
+  }
+
+  /* Show thumb on hover or while actively scrolling (Firefox) */
+  .scrollbar-minimal:hover,
+  .scrollbar-minimal.is-scrolling {
+    scrollbar-color: rgba(0, 0, 0, 0.35) transparent;
+    transition: scrollbar-color 0.15s ease;
+  }
+
+  /* WebKit: Chrome, Safari, Edge */
+  .scrollbar-minimal::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    /* Keep thumb away from rounded container corners */
+    margin-top: 16px;
+    margin-bottom: 16px;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.35);
+    border-radius: 999px;
+    /* Inset border trick — makes the visible thumb slimmer while keeping
+       the 10px hit-area, and prevents clipping by rounded container corners */
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    /* Fade out slowly (0.4s), fade in quickly (overridden on hover/.is-scrolling) */
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  /* Show thumb on hover or while actively scrolling (WebKit) */
+  .scrollbar-minimal:hover::-webkit-scrollbar-thumb,
+  .scrollbar-minimal.is-scrolling::-webkit-scrollbar-thumb {
+    opacity: 1;
+    transition: opacity 0.15s ease;
+  }
+
+
+  /* ── Panel scrollbar — overlay style ─────────────────────────────────────
+   * Unlike scrollbar-minimal (which forces a 10px classic track in webkit),
+   * this class does NOT define ::-webkit-scrollbar { width } — so webkit
+   * keeps its native overlay scrollbar behavior (no space reserved, no gap).
+   * Firefox gets a thin scrollbar that appears only on overflow.
+   * ─────────────────────────────────────────────────────────────────────── */
+  .scrollbar-panel {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.4s ease;
+  }
+
+  .scrollbar-panel:hover,
+  .scrollbar-panel.is-scrolling {
+    scrollbar-color: rgba(0, 0, 0, 0.35) transparent;
+    transition: scrollbar-color 0.15s ease;
+  }
+
+  /* WebKit: style the thumb only — no width = native overlay track */
+  .scrollbar-panel::-webkit-scrollbar-track {
+    background-color: hsl(var(--muted));
+  }
+
+  .scrollbar-panel::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 999px;
+    transition: background-color 0.4s ease;
+  }
+
+  .scrollbar-panel:hover::-webkit-scrollbar-thumb,
+  .scrollbar-panel.is-scrolling::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.35);
+    transition: background-color 0.15s ease;
+  }
+}
