@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, ClipboardList, ChevronsUpDown, ChevronUp, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { StageSeparatorRow } from '@/components/deals/table/StageSeparatorRow'
@@ -8,20 +8,48 @@ import { type DeptSection, type PosRow } from './lib'
 
 // Unified column set: open and filled live together, row shows filled/total + status breakdown.
 const COLUMNS = [
-  { id: 'role', label: 'Role', center: false },
-  { id: 'month', label: 'Target month', center: false },
-  { id: 'headcount', label: 'Headcount', center: true },
-  { id: 'status', label: 'Status', center: false },
-  { id: 'location', label: 'Location', center: false },
-  { id: 'people', label: 'People', center: false },
-  { id: 'age', label: 'Open for', center: false },
-  { id: 'actions', label: '', center: true },
+  { id: 'role', label: 'Role', center: false, sortable: true },
+  { id: 'month', label: 'Target month', center: false, sortable: true },
+  { id: 'headcount', label: 'Headcount', center: true, sortable: true },
+  { id: 'status', label: 'Status', center: false, sortable: true },
+  { id: 'location', label: 'Location', center: false, sortable: true },
+  { id: 'people', label: 'People', center: false, sortable: true },
+  { id: 'age', label: 'Open for', center: false, sortable: true },
+  { id: 'notes', label: 'Notes', center: false, sortable: false },
+  { id: 'settings', label: 'Settings', center: false, sortable: false },
 ]
-const FIXED: Record<string, string> = { headcount: '120px', age: '120px', actions: '56px' }
+const FIXED: Record<string, string> = { headcount: '120px', age: '120px', notes: '90px', settings: '90px' }
 
 // Location colours are dedicated tokens, deliberately off the status palette.
 const LOC_TOKEN: Record<string, string> = {
   India: 'var(--loc-india)', Europe: 'var(--loc-europe)', 'North America': 'var(--loc-north-america)',
+}
+
+// Sort key per column. Strings sort alphabetically, numbers numerically.
+function sortValue(row: PosRow, col: string): string | number {
+  switch (col) {
+    case 'role': return row.title
+    case 'month': return row.mk
+    case 'headcount': return row.total
+    case 'status': return row.open + row.pending
+    case 'location': return row.locs.reduce((s, l) => s + l.n, 0)
+    case 'people': return row.people.length
+    case 'age': return row.ageDays
+    default: return 0
+  }
+}
+
+function StatusBadges({ row }: { row: PosRow }) {
+  const complete = row.open === 0 && row.pending === 0 && row.filled > 0
+  if (complete) return <Badge variant="success">Filled</Badge>
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {row.pending > 0 && <Badge variant="warning">{row.pending} past due</Badge>}
+      {row.open > 0 && <Badge variant="blue">{row.open} open</Badge>}
+      {row.noReq > 0 && <Badge variant="neutral">{row.noReq} no request</Badge>}
+      {row.filled > 0 && (row.open > 0 || row.pending > 0) && <Badge variant="success">{row.filled} filled</Badge>}
+    </div>
+  )
 }
 
 function LocationCluster({ locs }: { locs: { loc: string; n: number }[] }) {
@@ -34,19 +62,6 @@ function LocationCluster({ locs }: { locs: { loc: string; n: number }[] }) {
           {l.n}
         </span>
       ))}
-    </div>
-  )
-}
-
-function StatusBadges({ row }: { row: PosRow }) {
-  const complete = row.open === 0 && row.pending === 0 && row.filled > 0
-  if (complete) return <Badge variant="success">Filled</Badge>
-  return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      {row.pending > 0 && <Badge variant="warning">{row.pending} past due</Badge>}
-      {row.open > 0 && <Badge variant="blue">{row.open} open</Badge>}
-      {row.noReq > 0 && <Badge variant="neutral">{row.noReq} no request</Badge>}
-      {row.filled > 0 && (row.open > 0 || row.pending > 0) && <Badge variant="success">{row.filled} filled</Badge>}
     </div>
   )
 }
@@ -94,6 +109,20 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
   )
   const toggle = (k: string) => setOpen((p) => ({ ...p, [k]: !(p[k] ?? true) }))
 
+  // Sort state cycles asc → desc → off per column.
+  const [sort, setSort] = useState<{ col: string; dir: 'asc' | 'desc' } | null>(null)
+  const onSort = (col: string) =>
+    setSort((s) => (s && s.col === col ? (s.dir === 'asc' ? { col, dir: 'desc' } : null) : { col, dir: 'asc' }))
+  const sortRows = (rows: PosRow[]) => {
+    if (!sort) return rows
+    const { col, dir } = sort
+    return [...rows].sort((a, b) => {
+      const av = sortValue(a, col), bv = sortValue(b, col)
+      const cmp = typeof av === 'string' ? String(av).localeCompare(String(bv)) : (av as number) - (bv as number)
+      return dir === 'asc' ? cmp : -cmp
+    })
+  }
+
   const cellCls = (idx: number) => cn('h-10 px-3 text-sm', idx > 0 && 'border-l border-border')
 
   return (
@@ -104,19 +133,35 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
         </colgroup>
         <thead>
           <tr>
-            {cols.map((c, idx) => (
-              <th
-                key={c.id}
-                className={cn(
-                  'h-12 bg-primary-foreground text-sm font-medium text-muted-foreground whitespace-nowrap border-b border-border',
-                  idx === 0 ? 'pl-4 pr-3 text-left' : 'px-3',
-                  idx > 0 && 'border-l border-border',
-                  c.center ? 'text-center' : 'text-left',
-                )}
-              >
-                {c.label}
-              </th>
-            ))}
+            {cols.map((c, idx) => {
+              const active = sort?.col === c.id
+              return (
+                <th
+                  key={c.id}
+                  className={cn(
+                    'h-12 bg-primary-foreground text-sm font-medium text-muted-foreground whitespace-nowrap border-b border-border',
+                    idx === 0 ? 'pl-4 pr-3 text-left' : 'px-3',
+                    idx > 0 && 'border-l border-border',
+                    c.center ? 'text-center' : 'text-left',
+                  )}
+                >
+                  {c.sortable ? (
+                    <button
+                      type="button"
+                      onClick={() => onSort(c.id)}
+                      className={cn('inline-flex items-center gap-1 transition-colors hover:text-foreground', c.center && 'justify-center', active && 'text-foreground')}
+                    >
+                      {c.label}
+                      {active
+                        ? (sort!.dir === 'asc' ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />)
+                        : <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />}
+                    </button>
+                  ) : (
+                    c.label
+                  )}
+                </th>
+              )
+            })}
           </tr>
         </thead>
         <tbody>
@@ -125,7 +170,7 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
             return (
               <React.Fragment key={section.key}>
                 <StageSeparatorRow label={section.label} count={section.rows.length} colSpan={count} open={isOpen} onToggle={() => toggle(section.key)} />
-                {isOpen && section.rows.map((row) => (
+                {isOpen && sortRows(section.rows).map((row) => (
                   <tr
                     key={row.id}
                     onClick={() => onRowClick(row)}
@@ -162,15 +207,28 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
                           return <td key={c.id} className={cls}><PeopleCluster people={row.people} /></td>
                         case 'age':
                           return <td key={c.id} className={cn(cls, 'text-muted-foreground')}>{row.open + row.pending > 0 ? row.age : '—'}</td>
-                        case 'actions':
+                        case 'notes':
                           return (
-                            <td key={c.id} className={cn(cls, 'text-center')}>
+                            <td key={c.id} className={cls}>
+                              <button
+                                type="button"
+                                onClick={(e) => e.stopPropagation()}
+                                aria-label="Notes"
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground/60 transition-colors hover:bg-extended-hover hover:text-foreground"
+                              >
+                                <ClipboardList className="h-4 w-4" />
+                              </button>
+                            </td>
+                          )
+                        case 'settings':
+                          return (
+                            <td key={c.id} className={cls}>
                               {row.open + row.pending > 0 && (
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); onRowClose?.(row) }}
-                                  className="inline-flex items-center justify-center h-7 w-7 rounded-sm text-muted-foreground transition-colors hover:text-badge-error-fg hover:bg-destructive/10"
                                   aria-label={`Close ${row.title}`}
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-badge-error-fg"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </button>

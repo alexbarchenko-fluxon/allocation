@@ -33,10 +33,10 @@ export function MetricCards({ r, onNeedsReview }: Props) {
   return (
     <TooltipProvider delayDuration={150}>
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-muted rounded-xl p-5 flex flex-col gap-3 min-w-[200px]">
+        <div className="bg-card border border-border shadow-sm rounded-lg p-6 flex flex-col gap-4 min-w-[200px]">
           <CardLabel tip="All active positions across departments. Closed positions are excluded.">Total positions</CardLabel>
-          <p className="text-4xl font-light leading-none">{r.total}</p>
-          <div className="flex h-2 w-full overflow-hidden rounded-full bg-background mt-1">
+          <p className="text-3xl font-semibold leading-none">{r.total}</p>
+          <div className="flex h-2 w-full overflow-hidden rounded-full bg-muted mt-1">
             {segs.map((s) => <span key={s.key} style={{ flex: s.value / barTotal, background: s.color }} />)}
           </div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -48,15 +48,15 @@ export function MetricCards({ r, onNeedsReview }: Props) {
           </div>
         </div>
 
-        <div className="bg-muted rounded-xl p-5 flex flex-col gap-3 min-w-[200px]">
+        <div className="bg-card border border-border shadow-sm rounded-lg p-6 flex flex-col gap-4 min-w-[200px]">
           <CardLabel tip="Positions with someone on staff or an accepted offer.">Filled</CardLabel>
-          <p className="text-4xl font-light leading-none">{r.filled}</p>
+          <p className="text-3xl font-semibold leading-none">{r.filled}</p>
           <p className="text-xs text-muted-foreground mt-auto">On staff or offer accepted</p>
         </div>
 
-        <div className="bg-muted rounded-xl p-5 flex flex-col gap-3 min-w-[200px]">
+        <div className="bg-card border border-border shadow-sm rounded-lg p-6 flex flex-col gap-4 min-w-[200px]">
           <CardLabel tip="Open and past-due positions still being hired for.">Open</CardLabel>
-          <p className="text-4xl font-light leading-none">{r.open + r.pending}</p>
+          <p className="text-3xl font-semibold leading-none">{r.open + r.pending}</p>
           {r.needsReview > 0 ? (
             <button onClick={onNeedsReview} className="group flex items-center gap-1 text-xs text-left text-electric-blue-600 hover:underline mt-auto font-medium">
               {r.needsReview} need review

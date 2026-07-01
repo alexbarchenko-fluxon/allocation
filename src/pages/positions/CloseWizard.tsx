@@ -28,9 +28,10 @@ export function CloseWizard({ open, onOpenChange, title, dept, monthLabel, recor
 
   useEffect(() => {
     if (open) {
-      // default: nothing picked, the user chooses what to close
+      // Preselect every position passed in — clicking "Close" should open with the
+      // position(s) already checked, ready to confirm (still editable before closing).
       setStep(0); setNote('')
-      setPicked({})
+      setPicked(Object.fromEntries(records.map((r) => [r.id, true])))
     }
   }, [open]) // eslint-disable-line
 

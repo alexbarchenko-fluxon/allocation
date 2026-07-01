@@ -20,6 +20,7 @@ export interface PosRow {
   closed: number;
   noReq: number;
   age: string;
+  ageDays: number;                       // numeric age for sorting the "Open for" column
   people: { name: string; loc: string }[];
   locs: { loc: string; n: number }[];   // location split across non-closed positions
 }
@@ -38,6 +39,7 @@ function rowFor(role: Role, mk: string, c: Cell): PosRow {
     filled: cFilled(c), open: cOpenN(c) - cPastDue(c, mk), pending: cPastDue(c, mk),
     closed: cClosedCount(c), noReq: cNoReq(c),
     age: openAgeLabel(c),
+    ageDays: daysOpen(c),
     people,
     locs,
   };

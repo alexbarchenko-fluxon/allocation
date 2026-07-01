@@ -37,14 +37,14 @@ function CountBadge({ n, tone }: { n: number; tone: Tone }) {
   )
 }
 
-// Filled-red destructive icon button — matches the Figma per-row Close.
+// Ghost/outline icon button — the per-row Close. Only the footer "Close all" is filled red.
 function CloseIconBtn({ onClick, label }: { onClick: () => void; label: string }) {
   return (
     <button
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex h-8 w-8 items-center justify-center rounded-md bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90"
+      className="flex h-8 w-8 items-center justify-center rounded-md border border-input bg-background text-muted-foreground shadow-xs transition-colors hover:bg-extended-hover hover:text-foreground"
     >
       <Trash2 className="h-4 w-4" />
     </button>

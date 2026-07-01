@@ -321,7 +321,7 @@ function PositionsPageInner() {
                       : <PositionsFlatTable rows={flatRows} onRowClick={(r) => { setSearch(r.title); setPosGroupBy('month') }} />)
                   : (sections.length === 0
                       ? <SearchEmpty query={search} />
-                      : <PositionsTable sections={sections} onRowClick={onRowClick} selectedId={selected} onRowClose={setCloseRow} />)}
+                      : <PositionsTable sections={sections} onRowClick={onRowClick} selectedId={selected} onRowClose={(r) => { setCloseScope(null); setCloseRow(r) }} />)}
               </TabsContent>
 
               <TabsContent value="needs">

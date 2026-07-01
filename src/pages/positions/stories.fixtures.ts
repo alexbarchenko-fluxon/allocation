@@ -5,7 +5,7 @@
 // stories representative of production data and correct as the model evolves.
 import { makeSeedCells, SEED_ACTIVITY } from '@/lib/positions/seed'
 import {
-  cellKey, cItems, cFilled, cOpenN, cPastDue, cClosedCount, cNoReq, openAgeLabel,
+  cellKey, cItems, cFilled, cOpenN, cPastDue, cClosedCount, cNoReq, openAgeLabel, daysOpen,
 } from '@/lib/positions/model'
 import { BASE_ROLES } from '@/lib/positions/roles'
 import { TIMELINE, monthFull } from '@/lib/positions/time'
@@ -42,6 +42,7 @@ export function makeRow(title: string, mk: string): PosRow {
     closed: cClosedCount(c),
     noReq: cNoReq(c),
     age: openAgeLabel(c),
+    ageDays: daysOpen(c),
     people,
     locs,
   }
