@@ -183,5 +183,13 @@ with sync_playwright() as p:
         save(pg, "10_dept_select_open")
     except Exception as e: print("dept:", e)
 
+    # 11 Positions — flat "All open" view (role-aggregated, decoupled from month)
+    reset(pg)
+    try:
+        pg.get_by_role("tab", name="Positions").first.click(timeout=2500); pg.wait_for_timeout(600)
+        pg.get_by_role("radio", name="All open").first.click(timeout=2500); pg.wait_for_timeout(700)
+        save(pg, "11_positions_all_open")
+    except Exception as e: print("all open:", e)
+
     b.close()
 print("DONE")
