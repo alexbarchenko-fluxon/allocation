@@ -227,3 +227,53 @@ export function roleRollup(cells: Cells, title: string, months: string[]): { fil
   }
   return { filled, open };
 }
+
+// Flat "all open positions" view: one row per role, aggregated across every target
+// month, decoupled from the timeline. Answers "how many open, how old, what for" at
+// a glance. Sorted oldest-first so the most urgent roles surface at the top.
+export interface OpenRoleRow {
+  title: string;
+  dept: string;
+  open: number;        // open, not yet past due
+  pending: number;     // past due
+  totalOpen: number;   // open + pending
+  months: number;      // distinct target months this role is open across
+  oldestDays: number;
+  oldestAge: string;   // human label for the oldest open request
+  noReq: number;       // open positions with no hiring request yet
+  locs: { loc: string; n: number }[];
+}
+
+export function openRolesFlat(cells: Cells, search: string, dept: string): OpenRoleRow[] {
+  const out: OpenRoleRow[] = [];
+  for (const role of BASE_ROLES) {
+    if (dept !== "All" && role.dept !== dept) continue;
+    if (search && !role.title.toLowerCase().includes(search.toLowerCase())) continue;
+    let open = 0, pending = 0, noReq = 0, months = 0, oldestDays = 0;
+    let oldestCell: Cell | undefined;
+    const locMap: Record<string, number> = {};
+    for (const m of TIMELINE) {
+      const c = cells[cellKey(role.title, m.key)];
+      if (!c) continue;
+      const o = cOpenN(c) - cPastDue(c, m.key);
+      const p = cPastDue(c, m.key);
+      if (o + p <= 0) continue;
+      months++;
+      open += o;
+      pending += p;
+      noReq += cNoReq(c);
+      cItems(c).filter((it) => it.status === "open" || it.status === "pending")
+        .forEach((it) => { if (it.loc) locMap[it.loc] = (locMap[it.loc] || 0) + 1; });
+      const d = daysOpen(c);
+      if (d > oldestDays) { oldestDays = d; oldestCell = c; }
+    }
+    if (open + pending <= 0) continue;
+    out.push({
+      title: role.title, dept: role.dept,
+      open, pending, totalOpen: open + pending, months,
+      oldestDays, oldestAge: openAgeLabel(oldestCell), noReq,
+      locs: Object.entries(locMap).map(([loc, n]) => ({ loc, n })),
+    });
+  }
+  return out.sort((a, b) => b.oldestDays - a.oldestDays);
+}
