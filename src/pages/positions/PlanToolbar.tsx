@@ -14,15 +14,14 @@ interface Props {
   startIdx: number
   winLen: number
   onShift: (d: number) => void
-  onJump: (startIdx: number) => void
-  onSetLen: (len: number) => void
+  onApply: (startIdx: number, len: number) => void
   canLeft: boolean
   canRight: boolean
   dept: string
   onDept: (v: string) => void
 }
 
-export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onJump, onSetLen, canLeft, canRight, dept, onDept }: Props) {
+export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onApply, canLeft, canRight, dept, onDept }: Props) {
   // The picker edits a pending selection; the grid only moves on Apply.
   const [open, setOpen] = useState(false)
   const [pStart, setPStart] = useState(startIdx)
@@ -34,8 +33,7 @@ export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onJump, onS
     if (o) { setPStart(startIdx); setPLen(winLen) }
   }
   const apply = () => {
-    onSetLen(pLen)
-    onJump(pStart)
+    onApply(pStart, pLen)
     setOpen(false)
   }
 

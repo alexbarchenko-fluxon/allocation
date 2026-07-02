@@ -19,8 +19,7 @@ const meta: Meta<typeof PlanToolbar> = {
   args: { winLen: WIN, dept: 'All' },
   argTypes: {
     onShift: { action: 'shift' },
-    onJump: { action: 'jump' },
-    onSetLen: { action: 'set-len' },
+    onApply: { action: 'apply' },
     onDept: { action: 'dept' },
   },
 }

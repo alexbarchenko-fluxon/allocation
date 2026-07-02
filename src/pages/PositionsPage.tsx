@@ -80,7 +80,12 @@ function PositionsPageInner() {
   const [planDept, setPlanDept] = useState('All')
   const [WIN, setWIN] = useState(6)
   const [startIdx, setStartIdx] = useState(() => earliestOpenIdx(makeSeedCells()))
-  const planMonths = useMemo(() => TIMELINE.slice(startIdx, startIdx + WIN).map((m) => m.key), [startIdx])
+  const planMonths = useMemo(() => TIMELINE.slice(startIdx, startIdx + WIN).map((m) => m.key), [startIdx, WIN])
+  // Atomic range apply — length + start together, clamped against the *new* length.
+  const applyRange = useCallback((start: number, len: number) => {
+    setWIN(len)
+    setStartIdx(Math.max(0, Math.min(TIMELINE.length - len, start)))
+  }, [])
   const planGroups = useMemo(() => planGrid(cells, planMonths, search, planDept), [cells, planMonths, search, planDept])
   const planRollups = useMemo(() => planGroups.map((g) => ({
     dept: g.dept,
@@ -268,8 +273,7 @@ function PositionsPageInner() {
                     startIdx={startIdx}
                     winLen={WIN}
                     onShift={shiftWin}
-                    onJump={(i) => setStartIdx(Math.max(0, Math.min(TIMELINE.length - WIN, i)))}
-                    onSetLen={(len) => { setWIN(len); setStartIdx((i) => Math.max(0, Math.min(TIMELINE.length - len, i))) }}
+                    onApply={applyRange}
                     canLeft={startIdx > 0}
                     canRight={startIdx + WIN < TIMELINE.length}
                     dept={planDept}
