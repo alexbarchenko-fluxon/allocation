@@ -86,7 +86,9 @@ export function CloseWizard({ open, onOpenChange, title, dept, monthLabel, recor
               {filledCount > 0 && (
                 <div className="flex items-start gap-2 rounded-lg border border-badge-warning-stroke bg-badge-warning/40 p-3.5">
                   <ShieldCheck className="h-4 w-4 text-badge-warning-fg shrink-0 mt-0.5" />
-                  <p className="text-sm text-badge-warning-fg">Filled positions are protected. Closing also closes the matching Spark hiring request.</p>
+                  <p className="text-sm text-badge-warning-fg">
+                    {filledCount} filled {filledCount === 1 ? 'position isn’t' : 'positions aren’t'} listed here — a position with someone in it can’t be closed. Closing an open position also closes its Spark hiring request.
+                  </p>
                 </div>
               )}
             </div>
