@@ -237,10 +237,6 @@ function PositionsPageInner() {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => setLogOpen((o) => !o)}><History /> Change log</Button>
-                {/* Experimental list-based create — unlabeled on purpose, comparison prototype. */}
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-foreground" title="New positions (list-based, experimental)" onClick={() => setCreateListOpen(true)}>
-                  <FlaskConical className="h-4 w-4" />
-                </Button>
                 <Button size="sm" onClick={() => setCreateOpen(true)}><Plus /> New position</Button>
               </div>
             </div>
@@ -350,6 +346,17 @@ function PositionsPageInner() {
 
       <CreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={onCreate} defaultTitle={createPrefill} />
       <CreateDialogList open={createListOpen} onOpenChange={setCreateListOpen} onCreate={onCreateList} />
+
+      {/* Experimental list-based create — floating flask, deliberately out of the way. */}
+      <button
+        type="button"
+        onClick={() => setCreateListOpen(true)}
+        title="New positions (list-based, experimental)"
+        aria-label="New positions (list-based, experimental)"
+        className="fixed bottom-4 right-4 z-50 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-muted-foreground/50 shadow-sm transition-all hover:text-foreground hover:shadow-md"
+      >
+        <FlaskConical className="h-4 w-4" />
+      </button>
 
       <CloseWizard
         open={!!closeRow}
