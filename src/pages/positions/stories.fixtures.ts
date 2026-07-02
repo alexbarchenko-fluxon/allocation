@@ -35,7 +35,7 @@ export function makeRow(title: string, mk: string): PosRow {
     id: cellKey(title, mk),
     title, label: role.label, chip: role.chip, dept: role.dept, mk,
     monthLabel: monthFull(mk),
-    total: cItems(c).length,
+    total: cItems(c).filter((p) => p.status !== 'closed').length,
     filled: cFilled(c),
     open: cOpenN(c) - cPastDue(c, mk),
     pending: cPastDue(c, mk),

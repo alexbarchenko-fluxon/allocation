@@ -61,7 +61,9 @@ function rowFor(role: Role, mk: string, c: Cell): PosRow {
     id: cellKey(role.title, mk),
     title: role.title, label: role.label, chip: role.chip, dept: role.dept, mk,
     monthLabel: monthFull(mk),
-    total: cItems(c).length,
+    // Active positions only — closed records live in the panel's Closed section,
+    // not in the headcount. Keeps the table consistent with the metric cards and Plan grid.
+    total: cItems(c).filter((p) => p.status !== "closed").length,
     filled: cFilled(c), open: cOpenN(c) - cPastDue(c, mk), pending: cPastDue(c, mk),
     closed: cClosedCount(c), noReq: cNoReq(c),
     age: openAgeLabel(c),
