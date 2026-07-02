@@ -11,6 +11,7 @@ const DOT: Record<string, string> = {
   accepted: 'var(--badge-success-fg)',
   pending: 'var(--badge-warning-fg)',
   open: 'var(--electric-blue-600)',
+  noreq: 'var(--badge-neutral-fg)', // no hiring request yet — grey, nothing recruiting
 }
 
 function Dots({ dots, max = 7 }: { dots: { status: string }[]; max?: number }) {

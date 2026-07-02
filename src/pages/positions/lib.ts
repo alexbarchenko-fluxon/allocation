@@ -173,8 +173,11 @@ export function planGrid(cells: Cells, months: string[], search: string, dept: s
         // Past-due is month-aware: an open position sitting in a month before the current one is
         // overdue even though its stored status is still "open". Render its dot as past-due so it
         // matches the orange cell, instead of reading as a healthy blue "open" dot.
+        // No-request positions read grey everywhere — nothing is being recruited yet.
         const dots = c ? cItems(c).filter((p) => p.status !== "closed").map((p) => ({
-          status: (isPastDueMonth(mk) && (p.status === "open" || p.status === "pending")) ? "pending" : p.status,
+          status: ((p.status === "open" || p.status === "pending") && p.noReq) ? "noreq"
+            : (isPastDueMonth(mk) && (p.status === "open" || p.status === "pending")) ? "pending"
+            : p.status,
         })) : [];
         return { mk, total, filled, open, pending, noReq, past: mk < CURRENT_KEY, done: total > 0 && filled >= total, empty: total === 0, reopened: !!(c && c.reopened), dots };
       });

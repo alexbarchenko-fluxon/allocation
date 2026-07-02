@@ -42,10 +42,12 @@ function sortValue(row: PosRow, col: string): string | number {
 function StatusBadges({ row }: { row: PosRow }) {
   const complete = row.open === 0 && row.pending === 0 && row.filled > 0
   if (complete) return <Badge variant="success">Filled</Badge>
+  // "Open" = recruiting (request exists). No-request positions are their own state.
+  const openWithReq = Math.max(0, row.open - row.noReq)
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
       {row.pending > 0 && <Badge variant="warning">{row.pending} past due</Badge>}
-      {row.open > 0 && <Badge variant="outline" className="border-transparent bg-electric-blue-50 text-foreground">{row.open} open</Badge>}
+      {openWithReq > 0 && <Badge variant="outline" className="border-transparent bg-electric-blue-50 text-foreground">{openWithReq} open</Badge>}
       {row.noReq > 0 && <Badge variant="neutral">{row.noReq} no request</Badge>}
       {row.filled > 0 && (row.open > 0 || row.pending > 0) && <Badge variant="success">{row.filled} filled</Badge>}
     </div>

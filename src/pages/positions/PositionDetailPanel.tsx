@@ -198,30 +198,23 @@ export function PositionDetailPanel({ row, records, notes, isOpen, onDismiss, on
   const recs = records.map((r) => (monthPastDue && r.status === 'open' && !r.noReq ? { ...r, status: 'pending' as const } : r))
 
   const filled = recs.filter((r) => r.status === 'started' || r.status === 'accepted')
-  const openRecs = recs.filter((r) => r.status === 'open')
+  // "Open" means a hiring request exists and recruiting is underway. Positions
+  // without a request are their own state — nothing is being recruited yet.
+  const openRecs = recs.filter((r) => r.status === 'open' && !r.noReq)
+  const noReqRecs = recs.filter((r) => r.status === 'open' && r.noReq)
   const pastDue = recs.filter((r) => r.status === 'pending')
   const closed = recs.filter((r) => r.status === 'closed')
-  const noReqCount = openRecs.filter((r) => r.noReq).length
 
-  // Open groups split by location AND request state — no-request positions get a
-  // different action ("Open request") than plain open ones (Close only).
-  const openGroups = (() => {
-    const m = new Map<string, { loc: string; noReq: boolean; items: DetailRecord[] }>()
-    for (const r of openRecs) {
-      const key = `${r.loc}|${!!r.noReq}`
-      if (!m.has(key)) m.set(key, { loc: r.loc, noReq: !!r.noReq, items: [] })
-      m.get(key)!.items.push(r)
-    }
-    return [...m.values()]
-  })()
-
-  const pastDueGroups = (() => {
+  const groupByLoc = (list: DetailRecord[]) => {
     const m = new Map<string, DetailRecord[]>()
-    for (const r of pastDue) { if (!m.has(r.loc)) m.set(r.loc, []); m.get(r.loc)!.push(r) }
+    for (const r of list) { if (!m.has(r.loc)) m.set(r.loc, []); m.get(r.loc)!.push(r) }
     return [...m.entries()].map(([loc, items]) => ({ loc, items }))
-  })()
+  }
+  const openGroups = groupByLoc(openRecs)
+  const noReqGroups = groupByLoc(noReqRecs)
+  const pastDueGroups = groupByLoc(pastDue)
 
-  const closeableIds = [...openRecs, ...pastDue].map((r) => r.id)
+  const closeableIds = [...openRecs, ...noReqRecs, ...pastDue].map((r) => r.id)
 
   return (
     <div
@@ -245,21 +238,20 @@ export function PositionDetailPanel({ row, records, notes, isOpen, onDismiss, on
           </Section>
 
           <Section label="Open" count={openRecs.length} tone="open" defaultOpen={openRecs.length > 0}>
-            {/* Copy matches what's actually in the section — recruiting, awaiting a request, or both. */}
-            <p className="mb-1 text-xs leading-4 text-muted-foreground">
-              {noReqCount === 0
-                ? "Actively recruiting via Spark. Close a request if the role's no longer needed."
-                : noReqCount === openRecs.length
-                ? 'No hiring request raised yet, so nothing is being recruited. Open a request to start, or close the position.'
-                : `Actively recruiting via Spark, except ${noReqCount} without a hiring request yet — open one to start recruiting.`}
-            </p>
+            <p className="mb-1 text-xs leading-4 text-muted-foreground">Actively recruiting via Spark. Close a request if the role's no longer needed.</p>
             {openGroups.map((g) => (
-              <LocRow key={`${g.loc}|${g.noReq}`} loc={g.loc} count={g.items.length} tone="open">
-                {g.noReq && <Badge variant="neutral">No request</Badge>}
+              <LocRow key={g.loc} loc={g.loc} count={g.items.length} tone="open">
                 <CloseIconBtn onClick={() => onCloseRecords(g.items.map((i) => i.id))} label={`Close ${g.loc} ${row?.title ?? ''}`} />
-                {g.noReq && (
-                  <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(g.items.map((i) => i.id))}>Open request</Button>
-                )}
+              </LocRow>
+            ))}
+          </Section>
+
+          <Section label="No request" count={noReqRecs.length} tone="neutral" defaultOpen={noReqRecs.length > 0}>
+            <p className="mb-1 text-xs leading-4 text-muted-foreground">No hiring request raised yet, so nothing is being recruited. Open a request to start, or close the position.</p>
+            {noReqGroups.map((g) => (
+              <LocRow key={g.loc} loc={g.loc} count={g.items.length} tone="neutral">
+                <CloseIconBtn onClick={() => onCloseRecords(g.items.map((i) => i.id))} label={`Close ${g.loc} ${row?.title ?? ''}`} />
+                <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(g.items.map((i) => i.id))}>Open request</Button>
               </LocRow>
             ))}
           </Section>
