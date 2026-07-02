@@ -26,7 +26,7 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
     <div className="overflow-hidden rounded-lg border border-border">
       <table className="w-full border-collapse">
         <colgroup>
-          <col /><col style={{ width: '150px' }} /><col style={{ width: '160px' }} /><col style={{ width: '120px' }} /><col style={{ width: '230px' }} />
+          <col /><col style={{ width: '150px' }} /><col style={{ width: '160px' }} /><col style={{ width: '120px' }} /><col style={{ width: '180px' }} />
         </colgroup>
         <thead>
           <tr>
@@ -62,7 +62,11 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
               <td className={cn(cell(3), 'text-muted-foreground')}>{item.age}</td>
               <td className={cell(4)}>
                 <div className="flex items-center justify-end gap-2">
-                  {/* Past-due requests stay open (just delayed) — Close is the only decision. */}
+                  {item.kind === 'noreq' && (
+                    <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(item)}>Open request</Button>
+                  )}
+                  {/* Trash is always the rightmost element, aligned across rows — same as the
+                      Positions table's trailing Settings column. Past-due rows: Close only. */}
                   <button
                     type="button"
                     onClick={() => onClose(item)}
@@ -71,9 +75,6 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
-                  {item.kind === 'noreq' && (
-                    <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(item)}>Open request</Button>
-                  )}
                 </div>
               </td>
             </tr>
