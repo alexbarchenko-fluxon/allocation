@@ -20,7 +20,7 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
     )
   }
 
-  const cell = (idx: number) => cn('h-10 px-3 text-sm', idx > 0 && 'border-l border-border')
+  const cell = (idx: number) => cn('h-12 px-3 text-sm', idx > 0 && 'border-l border-border')
 
   return (
     <div className="overflow-hidden rounded-lg border border-border">
@@ -63,7 +63,14 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
               <td className={cell(4)}>
                 <div className="flex items-center justify-end gap-2">
                   {/* Past-due requests stay open (just delayed) — Close is the only decision. */}
-                  <Button variant="ghost" size="sm" className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onClose(item)}><Trash2 className="h-3.5 w-3.5" /> Close</Button>
+                  <button
+                    type="button"
+                    onClick={() => onClose(item)}
+                    aria-label={`Close ${item.title}`}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-badge-error-fg"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                   {item.kind === 'noreq' && (
                     <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(item)}>Open request</Button>
                   )}
