@@ -6,11 +6,10 @@ export function ThemeToggle() {
   const [theme, setTheme] = React.useState<"light" | "dark">("light")
 
   React.useEffect(() => {
-    // Check for saved theme preference or default to light
+    // Default to light regardless of OS preference; only an explicit saved choice overrides it.
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-    const initialTheme = savedTheme || (prefersDark ? "dark" : "light")
-    
+    const initialTheme = savedTheme || "light"
+
     setTheme(initialTheme)
     document.documentElement.classList.toggle("dark", initialTheme === "dark")
   }, [])
