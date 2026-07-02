@@ -246,24 +246,29 @@ export function PositionDetailPanel({ row, records, notes, isOpen, onDismiss, on
             ))}
           </Section>
 
-          <Section label="No request" count={noReqRecs.length} tone="neutral" defaultOpen={noReqRecs.length > 0}>
-            <p className="mb-1 text-xs leading-4 text-muted-foreground">No hiring request raised yet, so nothing is being recruited. Open a request to start, or close the position.</p>
-            {noReqGroups.map((g) => (
-              <LocRow key={g.loc} loc={g.loc} count={g.items.length} tone="neutral">
-                <CloseIconBtn onClick={() => onCloseRecords(g.items.map((i) => i.id))} label={`Close ${g.loc} ${row?.title ?? ''}`} />
-                <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(g.items.map((i) => i.id))}>Open request</Button>
-              </LocRow>
-            ))}
-          </Section>
+          {/* Exception states hide at zero — when visible, they always mean something. */}
+          {noReqRecs.length > 0 && (
+            <Section label="No request" count={noReqRecs.length} tone="neutral" defaultOpen>
+              <p className="mb-1 text-xs leading-4 text-muted-foreground">No hiring request raised yet, so nothing is being recruited. Open a request to start, or close the position.</p>
+              {noReqGroups.map((g) => (
+                <LocRow key={g.loc} loc={g.loc} count={g.items.length} tone="neutral">
+                  <CloseIconBtn onClick={() => onCloseRecords(g.items.map((i) => i.id))} label={`Close ${g.loc} ${row?.title ?? ''}`} />
+                  <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(g.items.map((i) => i.id))}>Open request</Button>
+                </LocRow>
+              ))}
+            </Section>
+          )}
 
-          <Section label="Past due" count={pastDue.length} tone="pending" defaultOpen={pastDue.length > 0}>
-            <p className="mb-1 text-xs leading-4 text-muted-foreground">Target start date has passed. The request stays open — hiring is just delayed. Close it if we're no longer hiring.</p>
-            {pastDueGroups.map((g) => (
-              <LocRow key={g.loc} loc={g.loc} count={g.items.length} tone="pending">
-                <CloseIconBtn onClick={() => onCloseRecords(g.items.map((i) => i.id))} label={`Close ${g.loc} ${row?.title ?? ''}`} />
-              </LocRow>
-            ))}
-          </Section>
+          {pastDue.length > 0 && (
+            <Section label="Past due" count={pastDue.length} tone="pending" defaultOpen>
+              <p className="mb-1 text-xs leading-4 text-muted-foreground">Target start date has passed. The request stays open — hiring is just delayed. Close it if we're no longer hiring.</p>
+              {pastDueGroups.map((g) => (
+                <LocRow key={g.loc} loc={g.loc} count={g.items.length} tone="pending">
+                  <CloseIconBtn onClick={() => onCloseRecords(g.items.map((i) => i.id))} label={`Close ${g.loc} ${row?.title ?? ''}`} />
+                </LocRow>
+              ))}
+            </Section>
+          )}
 
           {closed.length > 0 && (
             <Section label="Closed" count={closed.length} tone="neutral" defaultOpen={false}>
