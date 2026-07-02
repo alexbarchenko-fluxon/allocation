@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MOCK_PEOPLE } from '@/mocks/people'
-import { Plus, History, Search } from 'lucide-react'
+import { Plus, History, Search, FlaskConical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -19,6 +19,7 @@ import { PlanGrid } from './positions/PlanGrid'
 import { PlanToolbar } from './positions/PlanToolbar'
 import { MetricCards } from './positions/MetricCards'
 import { CreateDialog } from './positions/CreateDialog'
+import { CreateDialogList, type CreateLine } from './positions/CreateDialogList'
 import { CloseWizard } from './positions/CloseWizard'
 import { OpenRequestWizard } from './positions/OpenRequestWizard'
 import { ChangeLog } from './positions/ChangeLog'
@@ -197,6 +198,23 @@ function PositionsPageInner() {
   }, [run])
   const openCreateFor = (title: string) => { setCreatePrefill(title); setCreateOpen(true) }
 
+  // Experimental list-based create (AJ's proposal) — flask button, for comparison testing.
+  const [createListOpen, setCreateListOpen] = useState(false)
+  const onCreateList = useCallback((lines: CreateLine[], raiseRequest: boolean, startISO: string | null) => {
+    const total = lines.reduce((s, l) => s + l.count, 0)
+    const roles = new Set(lines.map((l) => l.title)).size
+    const locFor = (l: CreateLine) => ({
+      India: l.loc === 'India' ? l.count : 0,
+      Europe: l.loc === 'Europe' ? l.count : 0,
+      'North America': l.loc === 'North America' ? l.count : 0,
+    })
+    const msg = raiseRequest
+      ? `opened ${total} positions across ${roles} ${roles === 1 ? 'role' : 'roles'}${startISO ? `, target start ${monthFull(startISO.slice(0, 7))}` : ''}, sent to Spark`
+      : `added ${total} positions across ${roles} ${roles === 1 ? 'role' : 'roles'} as internal moves, no hiring request`
+    run((cs) => lines.reduce((acc, l) => createPositions(acc, l.title, raiseRequest, startISO, locFor(l), l.count), cs), msg,
+      { title: `Opened ${total} ${total === 1 ? 'position' : 'positions'}`, desc: raiseRequest ? `${roles} ${roles === 1 ? 'role' : 'roles'} sent to Spark for recruiting.` : 'Added as internal moves.' })
+  }, [run])
+
   // Plan grid cell -> open the detail panel for that role-month
   const openCellPanel = (title: string, mk: string) => {
     const id = `${title}|${mk}`
@@ -219,6 +237,10 @@ function PositionsPageInner() {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => setLogOpen((o) => !o)}><History /> Change log</Button>
+                {/* Experimental list-based create — unlabeled on purpose, comparison prototype. */}
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-foreground" title="New positions (list-based, experimental)" onClick={() => setCreateListOpen(true)}>
+                  <FlaskConical className="h-4 w-4" />
+                </Button>
                 <Button size="sm" onClick={() => setCreateOpen(true)}><Plus /> New position</Button>
               </div>
             </div>
@@ -327,6 +349,7 @@ function PositionsPageInner() {
       <ChangeLog entries={activity} isOpen={logOpen} onClose={() => setLogOpen(false)} />
 
       <CreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={onCreate} defaultTitle={createPrefill} />
+      <CreateDialogList open={createListOpen} onOpenChange={setCreateListOpen} onCreate={onCreateList} />
 
       <CloseWizard
         open={!!closeRow}
