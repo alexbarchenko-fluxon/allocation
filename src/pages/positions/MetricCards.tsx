@@ -2,7 +2,7 @@ import { Info, ArrowRight } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { type Rollup } from './lib'
 
-const SEG = { filled: 'var(--metric-filled)', open: 'var(--electric-blue-600)', pending: 'var(--badge-warning-fg)' }
+const SEG = { filled: 'var(--metric-filled)', open: 'var(--electric-blue-600)', pending: 'var(--badge-warning-fg)', noreq: 'var(--badge-neutral-fg)' }
 
 function CardLabel({ children, tip }: { children: React.ReactNode; tip: string }) {
   return (
@@ -23,10 +23,14 @@ function CardLabel({ children, tip }: { children: React.ReactNode; tip: string }
 interface Props { r: Rollup; onNeedsReview: () => void }
 
 export function MetricCards({ r, onNeedsReview }: Props) {
+  // "Open" = recruiting (an active hiring request exists). No-request positions
+  // are their own grey state — planned, but nothing is being recruited yet.
+  const openWithReq = Math.max(0, r.open - r.noReq)
   const segs = [
     { key: 'filled', label: 'Filled', value: r.filled, color: SEG.filled },
-    { key: 'open', label: 'Open', value: r.open, color: SEG.open },
+    { key: 'open', label: 'Open', value: openWithReq, color: SEG.open },
     { key: 'pending', label: 'Past due', value: r.pending, color: SEG.pending },
+    { key: 'noreq', label: 'No request', value: r.noReq, color: SEG.noreq },
   ].filter((s) => s.value > 0)
   const barTotal = segs.reduce((s, x) => s + x.value, 0) || 1
 
@@ -55,8 +59,8 @@ export function MetricCards({ r, onNeedsReview }: Props) {
         </div>
 
         <div className="bg-card border border-border shadow-sm rounded-lg p-6 flex flex-col gap-4 min-w-[200px]">
-          <CardLabel tip="Open and past-due positions still being hired for.">Open</CardLabel>
-          <p className="text-3xl font-semibold leading-none">{r.open + r.pending}</p>
+          <CardLabel tip="Positions with an active hiring request, including past due. No-request positions are counted separately.">Open</CardLabel>
+          <p className="text-3xl font-semibold leading-none">{openWithReq + r.pending}</p>
           {r.needsReview > 0 ? (
             <button onClick={onNeedsReview} className="group flex items-center gap-1 text-xs text-left text-electric-blue-600 hover:underline mt-auto font-medium">
               {r.needsReview} need review
