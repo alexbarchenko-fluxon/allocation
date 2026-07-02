@@ -1,6 +1,5 @@
-import { Trash2 } from 'lucide-react'
+import { Trash2, Zap } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { type ReviewItem } from './lib'
 
@@ -63,7 +62,16 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
               <td className="h-12 px-3 pr-4 text-sm">
                 <div className="flex items-center justify-end gap-2">
                   {item.kind === 'noreq' && (
-                    <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(item)}>Open request</Button>
+                    // Zap = "send to Spark", the metaphor the create dialog already established.
+                    <button
+                      type="button"
+                      onClick={() => onOpenRequest(item)}
+                      title="Open request — sends to Spark"
+                      aria-label={`Open request for ${item.title}`}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-electric-blue-50 hover:text-electric-blue-600"
+                    >
+                      <Zap className="h-4 w-4" />
+                    </button>
                   )}
                   {/* Trash is always the rightmost element, aligned across rows — same as the
                       Positions table's trailing Settings column. Past-due rows: Close only. */}
