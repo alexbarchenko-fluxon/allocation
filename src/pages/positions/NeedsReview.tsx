@@ -30,13 +30,13 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
         </colgroup>
         <thead>
           <tr>
-            {['Role', 'Target month', 'Status', 'Open for', 'Action'].map((h, idx) => (
+            {['Role', 'Target month', 'Status', 'Open for', ''].map((h, idx) => (
               <th
-                key={h}
+                key={h || 'actions'}
                 className={cn(
                   'h-12 bg-primary-foreground text-sm font-medium text-muted-foreground whitespace-nowrap border-b border-border text-left',
                   idx === 0 ? 'pl-4 pr-3' : 'px-3',
-                  idx > 0 && 'border-l border-border',
+                  idx > 0 && idx < 4 && 'border-l border-border',
                 )}
               >
                 {h}
@@ -60,7 +60,7 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
                   : <Badge variant="warning">Past due</Badge>}
               </td>
               <td className={cn(cell(3), 'text-muted-foreground')}>{item.age}</td>
-              <td className={cell(4)}>
+              <td className="h-12 px-3 pr-4 text-sm">
                 <div className="flex items-center justify-end gap-2">
                   {item.kind === 'noreq' && (
                     <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(item)}>Open request</Button>

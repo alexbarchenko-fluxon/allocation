@@ -16,9 +16,10 @@ const COLUMNS = [
   { id: 'people', label: 'People', center: false, sortable: true },
   { id: 'age', label: 'Open for', center: false, sortable: true },
   { id: 'notes', label: 'Notes', center: false, sortable: false },
-  { id: 'settings', label: 'Settings', center: false, sortable: false },
+  // Row actions live unlabeled at the table edge, no column divider — richer, less grid-y.
+  { id: 'settings', label: '', center: false, sortable: false },
 ]
-const FIXED: Record<string, string> = { headcount: '120px', age: '120px', notes: '90px', settings: '90px' }
+const FIXED: Record<string, string> = { headcount: '120px', age: '120px', notes: '90px', settings: '56px' }
 
 // Location colours are dedicated tokens, deliberately off the status palette.
 const LOC_TOKEN: Record<string, string> = {
@@ -148,7 +149,7 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
                   className={cn(
                     'h-12 bg-primary-foreground text-sm font-medium text-muted-foreground whitespace-nowrap border-b border-border',
                     idx === 0 ? 'pl-4 pr-3 text-left' : 'px-3',
-                    idx > 0 && 'border-l border-border',
+                    idx > 0 && c.id !== 'settings' && 'border-l border-border',
                     c.center ? 'text-center' : 'text-left',
                   )}
                 >
@@ -226,8 +227,9 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
                             </td>
                           )
                         case 'settings':
+                          // No divider — the action hugs the row end, like the reference design.
                           return (
-                            <td key={c.id} className={cls}>
+                            <td key={c.id} className="h-12 px-3 pr-4 text-right text-sm">
                               {row.open + row.pending > 0 && (
                                 <button
                                   type="button"
