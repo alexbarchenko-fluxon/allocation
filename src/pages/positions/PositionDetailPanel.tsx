@@ -82,7 +82,7 @@ function LocRow({ loc, count, tone, children }: { loc: string; count: number; to
     <div className="flex items-center justify-between gap-2 py-2 border-b border-border last:border-b-0">
       <span className="flex min-w-0 items-center gap-1.5">
         <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: LOC_TOKEN[loc] ?? 'var(--muted-foreground)' }} />
-        <span className="truncate text-sm font-medium text-foreground">{loc}</span>
+        <span className="truncate text-sm font-medium text-foreground" title={loc}>{loc}</span>
         {count > 1 && <CountBadge n={count} tone={tone} />}
       </span>
       <span className="flex shrink-0 items-center gap-2">{children}</span>
@@ -201,6 +201,7 @@ export function PositionDetailPanel({ row, records, notes, isOpen, onDismiss, on
   const openRecs = recs.filter((r) => r.status === 'open')
   const pastDue = recs.filter((r) => r.status === 'pending')
   const closed = recs.filter((r) => r.status === 'closed')
+  const noReqCount = openRecs.filter((r) => r.noReq).length
 
   // Open groups split by location AND request state — no-request positions get a
   // different action ("Open request") than plain open ones (Close only).
@@ -244,9 +245,17 @@ export function PositionDetailPanel({ row, records, notes, isOpen, onDismiss, on
           </Section>
 
           <Section label="Open" count={openRecs.length} tone="open" defaultOpen={openRecs.length > 0}>
-            <p className="mb-1 text-xs leading-4 text-muted-foreground">Actively recruiting via Spark. Close a request if the role's no longer needed.</p>
+            {/* Copy matches what's actually in the section — recruiting, awaiting a request, or both. */}
+            <p className="mb-1 text-xs leading-4 text-muted-foreground">
+              {noReqCount === 0
+                ? "Actively recruiting via Spark. Close a request if the role's no longer needed."
+                : noReqCount === openRecs.length
+                ? 'No hiring request raised yet, so nothing is being recruited. Open a request to start, or close the position.'
+                : `Actively recruiting via Spark, except ${noReqCount} without a hiring request yet — open one to start recruiting.`}
+            </p>
             {openGroups.map((g) => (
               <LocRow key={`${g.loc}|${g.noReq}`} loc={g.loc} count={g.items.length} tone="open">
+                {g.noReq && <Badge variant="neutral">No request</Badge>}
                 <CloseIconBtn onClick={() => onCloseRecords(g.items.map((i) => i.id))} label={`Close ${g.loc} ${row?.title ?? ''}`} />
                 {g.noReq && (
                   <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(g.items.map((i) => i.id))}>Open request</Button>
