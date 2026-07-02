@@ -10,8 +10,8 @@ import { DEPTS } from '@/lib/positions/roles'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { makeSeedCells, SEED_ACTIVITY, type ActivityItem } from '@/lib/positions/seed'
 import { type Cells } from '@/lib/positions/model'
-import { TIMELINE, monthFull, CURRENT_KEY } from '@/lib/positions/time'
-import { unifiedRows, groupByDept, recordsForRow, needsReviewItems, needsReviewCount, planGrid, rollup, earliestOpenIdx, deptRollup, roleRollup, type PosRow, type ReviewItem } from './positions/lib'
+import { TIMELINE, monthFull, CURRENT_KEY, TODAY } from '@/lib/positions/time'
+import { unifiedRows, groupByDept, recordsForRow, needsReviewItems, needsReviewCount, planGrid, rollup, earliestOpenIdx, deptRollup, roleRollup, seedNotes, type PosRow, type ReviewItem, type PosNote } from './positions/lib'
 import { PositionsTable } from './positions/PositionsTable'
 import { PositionDetailPanel } from './positions/PositionDetailPanel'
 import { NeedsReview } from './positions/NeedsReview'
@@ -20,12 +20,11 @@ import { PlanToolbar } from './positions/PlanToolbar'
 import { MetricCards } from './positions/MetricCards'
 import { CreateDialog } from './positions/CreateDialog'
 import { CloseWizard } from './positions/CloseWizard'
-import { ExtendWizard } from './positions/ExtendWizard'
-import { isPastDueMonth } from '@/lib/positions/model'
+import { OpenRequestWizard } from './positions/OpenRequestWizard'
 import { ChangeLog } from './positions/ChangeLog'
 import { SearchEmpty } from './positions/EmptyState'
 import { ToastProvider, useToast } from './positions/toast'
-import { openRequestAt, extendOne, createPositions, closeByIds } from './positions/mutations'
+import { openRequestAt, createPositions, closeByIds } from './positions/mutations'
 
 export default function PositionsPage() {
   return (
@@ -112,15 +111,10 @@ function PositionsPageInner() {
   }, [push, log])
 
   // Queue actions
-  const reviewExtend = useCallback((it: ReviewItem) => {
-    const id = `${it.title}|${it.mk}`
-    const row = unifiedRows(cells, '', 'All', false).find((r) => r.id === id)
-    if (row) { setExtendScope(null); setExtendRow(row); setExtendMode('extend') }
-  }, [cells])
   const reviewOpenReq = useCallback((it: ReviewItem) => {
     const id = `${it.title}|${it.mk}`
     const row = unifiedRows(cells, '', 'All', false).find((r) => r.id === id)
-    if (row) { setExtendScope(null); setExtendRow(row); setExtendMode('open') }
+    if (row) { setReqScope(null); setReqRow(row) }
   }, [cells])
   const reviewClose = useCallback((it: ReviewItem) => {
     const id = `${it.title}|${it.mk}`
@@ -129,18 +123,32 @@ function PositionsPageInner() {
   }, [cells])
 
   // Panel per-group actions — open the matching wizard scoped to the chosen records.
-  const panelExtend = useCallback((recIds: string[]) => {
-    if (!selectedRow) return
-    setExtendScope(recIds); setExtendMode('extend'); setExtendRow(selectedRow)
-  }, [selectedRow])
   const panelOpenRequest = useCallback((recIds: string[]) => {
     if (!selectedRow) return
-    setExtendScope(recIds); setExtendMode('open'); setExtendRow(selectedRow)
+    setReqScope(recIds); setReqRow(selectedRow)
   }, [selectedRow])
   const panelClose = useCallback((recIds: string[]) => {
     if (!selectedRow) return
     setCloseScope(recIds); setCloseRow(selectedRow)
   }, [selectedRow])
+
+  // Notes per role-month row — seeded mocks, overridden once the user adds one.
+  const [notesMap, setNotesMap] = useState<Record<string, PosNote[]>>({})
+  const notesFor = useCallback((id: string) => notesMap[id] ?? seedNotes(id), [notesMap])
+  const noteDate = `${TODAY.slice(8, 10)}.${TODAY.slice(5, 7)}.${TODAY.slice(0, 4)}`
+  const addNote = useCallback((text: string) => {
+    if (!selectedRow) return
+    const id = selectedRow.id
+    setNotesMap((m) => {
+      const cur = m[id] ?? seedNotes(id)
+      return { ...m, [id]: [{ id: `${id}-note-${cur.length}-user`, author: 'Volodymyr S.', date: noteDate, text, isNew: true }, ...cur] }
+    })
+  }, [selectedRow, noteDate])
+  // Table rows read the same notes source, so added notes show up in the Notes column too.
+  const sectionsWithNotes = useMemo(
+    () => sections.map((s) => ({ ...s, rows: s.rows.map((r) => (notesMap[r.id] ? { ...r, notes: notesMap[r.id].length } : r)) })),
+    [sections, notesMap],
+  )
 
   // Close wizard
   const [closeRow, setCloseRow] = useState<PosRow | null>(null)
@@ -156,37 +164,25 @@ function PositionsPageInner() {
       { title: `Closed ${ids.length} ${ids.length === 1 ? 'position' : 'positions'}`, desc: `${r.title} closed. See the change log for history.` })
   }, [closeRow, run])
 
-  // Extend / Open wizard (same select-inside-modal pattern as Close)
-  const [extendRow, setExtendRow] = useState<PosRow | null>(null)
-  const [extendMode, setExtendMode] = useState<'extend' | 'open'>('extend')
-  const [extendScope, setExtendScope] = useState<string[] | null>(null) // record ids, or null = all
-  const extendRecordsList = useMemo(() => (extendRow ? recordsForRow(cells, extendRow.id) : []), [cells, extendRow])
-  const extendActive = useMemo(() => {
-    if (!extendRow) return []
-    const pastMonth = isPastDueMonth(extendRow.mk)
-    return extendRecordsList.filter((r) =>
-      (extendMode === 'open'
-        ? (r.status === 'open' || r.status === 'pending') && r.noReq
-        : (r.status === 'pending' || (pastMonth && r.status === 'open' && !r.noReq)))
-      && (!extendScope || extendScope.includes(r.id))
-    )
-  }, [extendRow, extendMode, extendRecordsList, extendScope])
-  const onExtendConfirm = useCallback((ids: string[], targetISO: string | null) => {
-    if (!extendRow) return
-    const r = extendRow
+  // Open-request wizard (same select-inside-modal pattern as Close)
+  const [reqRow, setReqRow] = useState<PosRow | null>(null)
+  const [reqScope, setReqScope] = useState<string[] | null>(null) // record ids, or null = all
+  const reqRecordsList = useMemo(() => (reqRow ? recordsForRow(cells, reqRow.id) : []), [cells, reqRow])
+  const reqActive = useMemo(() => {
+    if (!reqRow) return []
+    return reqRecordsList.filter((r) =>
+      (r.status === 'open' || r.status === 'pending') && r.noReq && (!reqScope || reqScope.includes(r.id)))
+  }, [reqRow, reqRecordsList, reqScope])
+  const onOpenReqConfirm = useCallback((ids: string[], targetISO: string | null) => {
+    if (!reqRow) return
+    const r = reqRow
     const n = ids.length
-    if (extendMode === 'open') {
-      const target = targetISO || `${CURRENT_KEY}-01`
-      const tLabel = monthFull(target.slice(0, 7))
-      run((cs) => ids.reduce((acc, id) => openRequestAt(acc, r.title, r.mk, id, target), cs),
-        `raised a hiring request for ${n} × ${r.title}, target start ${tLabel}, sent to Spark`,
-        { title: `Raised ${n} ${n === 1 ? 'request' : 'requests'}`, desc: `${r.title} sent to Spark, target start ${tLabel}.` })
-    } else {
-      run((cs) => ids.reduce((acc, id) => extendOne(acc, r.title, r.mk, id), cs),
-        `extended ${n} × ${r.title}, moved from ${r.monthLabel} to ${monthFull(CURRENT_KEY)}`,
-        { title: `Extended ${n} ${n === 1 ? 'request' : 'requests'}`, desc: `Moved from ${r.monthLabel} to ${monthFull(CURRENT_KEY)}. No longer past due, recruiting continues.` })
-    }
-  }, [extendRow, extendMode, run])
+    const target = targetISO || `${CURRENT_KEY}-01`
+    const tLabel = monthFull(target.slice(0, 7))
+    run((cs) => ids.reduce((acc, id) => openRequestAt(acc, r.title, r.mk, id, target), cs),
+      `raised a hiring request for ${n} × ${r.title}, target start ${tLabel}, sent to Spark`,
+      { title: `Raised ${n} ${n === 1 ? 'request' : 'requests'}`, desc: `${r.title} sent to Spark, target start ${tLabel}.` })
+  }, [reqRow, run])
 
   // Create
   const [createOpen, setCreateOpen] = useState(false)
@@ -298,13 +294,13 @@ function PositionsPageInner() {
               </TabsContent>
 
               <TabsContent value="positions">
-                {sections.length === 0
+                {sectionsWithNotes.length === 0
                   ? <SearchEmpty query={search} />
-                  : <PositionsTable sections={sections} onRowClick={onRowClick} selectedId={selected} onRowClose={(r) => { setCloseScope(null); setCloseRow(r) }} />}
+                  : <PositionsTable sections={sectionsWithNotes} onRowClick={onRowClick} selectedId={selected} onRowClose={(r) => { setCloseScope(null); setCloseRow(r) }} />}
               </TabsContent>
 
               <TabsContent value="needs">
-                <NeedsReview items={reviewItems} onExtend={reviewExtend} onOpenRequest={reviewOpenReq} onClose={reviewClose} />
+                <NeedsReview items={reviewItems} onOpenRequest={reviewOpenReq} onClose={reviewClose} />
               </TabsContent>
             </Tabs>
           </div>
@@ -314,11 +310,13 @@ function PositionsPageInner() {
       <PositionDetailPanel
         row={selectedRow}
         records={records}
+        notes={selectedRow ? notesFor(selectedRow.id) : []}
         isOpen={!!selectedRow}
         onDismiss={() => { setSelectedRow(null); setSelected(null) }}
-        onExtend={panelExtend}
         onOpenRequest={panelOpenRequest}
         onCloseRecords={panelClose}
+        onNewPosition={() => { if (selectedRow) openCreateFor(selectedRow.title) }}
+        onAddNote={addNote}
         onPerson={(name: string) => {
           const match = MOCK_PEOPLE.find((p) => p.name === name)
           if (match) navigate(`/people?panel=${match.id}`)
@@ -340,15 +338,14 @@ function PositionsPageInner() {
         filledCount={closeFilled}
         onConfirm={onCloseConfirm}
       />
-      <ExtendWizard
-        open={!!extendRow}
-        onOpenChange={(o) => { if (!o) { setExtendRow(null); setExtendScope(null) } }}
-        title={extendRow?.title ?? ''}
-        dept={extendRow?.dept ?? ''}
-        monthLabel={extendRow?.monthLabel ?? ''}
-        mode={extendMode}
-        records={extendActive}
-        onConfirm={onExtendConfirm}
+      <OpenRequestWizard
+        open={!!reqRow}
+        onOpenChange={(o) => { if (!o) { setReqRow(null); setReqScope(null) } }}
+        title={reqRow?.title ?? ''}
+        dept={reqRow?.dept ?? ''}
+        monthLabel={reqRow?.monthLabel ?? ''}
+        records={reqActive}
+        onConfirm={onOpenReqConfirm}
       />
     </div>
   )

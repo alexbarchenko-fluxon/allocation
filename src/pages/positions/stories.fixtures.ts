@@ -11,7 +11,7 @@ import { BASE_ROLES } from '@/lib/positions/roles'
 import { TIMELINE, monthFull } from '@/lib/positions/time'
 import {
   unifiedRows, groupByDept, planGrid, recordsForRow, needsReviewItems,
-  deptRollup, roleRollup, rollup, earliestOpenIdx, noteCount,
+  deptRollup, roleRollup, rollup, earliestOpenIdx, noteCount, seedNotes as seedNotesFor,
   type PosRow, type DetailRecord, type ReviewItem, type Rollup, type DeptSection, type GridRow,
 } from './lib'
 import { type ActivityItem } from '@/lib/positions/seed'
@@ -105,12 +105,14 @@ export const reviewPastDue: ReviewItem[] = reviewItems.filter((r) => r.kind === 
 // ── ChangeLog ───────────────────────────────────────────────────────────────
 export const activity: ActivityItem[] = SEED_ACTIVITY
 
-// ── ExtendWizard ────────────────────────────────────────────────────────────
+// ── OpenRequestWizard ───────────────────────────────────────────────────────
 const actionable = (id: string) =>
   recordsForRow(cells, id).filter((r) => r.status === 'open' || r.status === 'pending')
 
-export const extendRecords: DetailRecord[] = actionable(cellKey('Senior Software Engineer', '2026-05'))
 export const openReqRecords: DetailRecord[] = actionable(cellKey('Senior Product Manager', '2026-08'))
+
+// ── Panel notes ─────────────────────────────────────────────────────────────
+export const panelNotes = seedNotesFor(cellKey('Software Engineer', '2026-06'))
 
 // ── CloseWizard ─────────────────────────────────────────────────────────────
 export const closeRecords: DetailRecord[] = actionable(cellKey('Senior Software Engineer', '2026-08'))

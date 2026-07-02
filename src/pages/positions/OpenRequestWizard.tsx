@@ -18,32 +18,29 @@ interface Props {
   title: string
   dept: string
   monthLabel: string
-  /** 'extend' for past-due rows, 'open' for no-request rows. */
-  mode: 'extend' | 'open'
-  records: DetailRecord[]            // the actionable (open/pending/no-request) records
+  records: DetailRecord[]            // the no-request records eligible for a hiring request
   onConfirm: (ids: string[], targetISO: string | null) => void
 }
 
-export function ExtendWizard({ open, onOpenChange, title, dept, monthLabel, mode, records, onConfirm }: Props) {
+// Raise hiring requests for positions that don't have one yet. (The old "extend"
+// flow is gone: per PRD, a late request keeps its target date — it's just delayed.)
+export function OpenRequestWizard({ open, onOpenChange, title, dept, monthLabel, records, onConfirm }: Props) {
   const [picked, setPicked] = useState<Record<string, boolean>>({})
   const [date, setDate] = useState<Date | undefined>(defaultTarget())
 
   useEffect(() => {
-    if (open) { setPicked({}); setDate(defaultTarget()) } // nothing pre-selected, date defaults to current month
+    // Preselect everything passed in — ready to confirm, still editable.
+    if (open) { setPicked(Object.fromEntries(records.map((r) => [r.id, true]))); setDate(defaultTarget()) }
   }, [open]) // eslint-disable-line
 
   const minDate = (() => { const d = new Date(TODAY + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d })()
   const pickedIds = records.filter((r) => picked[r.id]).map((r) => r.id)
   const n = pickedIds.length
-  const verb = mode === 'extend' ? 'Extend' : 'Open'
-  // Open Request requires a target date; Extend uses the fixed current-month move.
-  const dateOk = mode === 'extend' || !!date
-  const canConfirm = n > 0 && dateOk
+  const canConfirm = n > 0 && !!date
 
   const confirm = () => {
     if (!canConfirm) return
-    const targetISO = mode === 'open' && date ? date.toISOString().slice(0, 10) : null
-    onConfirm(pickedIds, targetISO)
+    onConfirm(pickedIds, date ? date.toISOString().slice(0, 10) : null)
     onOpenChange(false)
   }
 
@@ -52,8 +49,8 @@ export function ExtendWizard({ open, onOpenChange, title, dept, monthLabel, mode
       <DialogContent className="max-w-xl p-0 overflow-hidden gap-0">
         {/* Header */}
         <div className="px-6 pt-6 pb-4">
-          <h2 className="text-xl font-semibold tracking-tight">{mode === 'extend' ? 'Extend' : 'Open'} {title} positions</h2>
-          <p className="text-sm text-muted-foreground mt-1">{dept} · {monthLabel} · {records.length} {mode === 'extend' ? 'past due' : 'without a request'}</p>
+          <h2 className="text-xl font-semibold tracking-tight">Open {title} positions</h2>
+          <p className="text-sm text-muted-foreground mt-1">{dept} · {monthLabel} · {records.length} without a request</p>
         </div>
         <div className="border-t border-border" />
 
@@ -66,26 +63,24 @@ export function ExtendWizard({ open, onOpenChange, title, dept, monthLabel, mode
                 <span className="h-2 w-2 rounded-full shrink-0" style={{ background: LOC_DOT[r.loc] || 'var(--muted-foreground)' }} />
                 <span className="text-sm font-medium text-foreground truncate">{r.loc}</span>
               </span>
-              <Badge variant={mode === 'extend' ? 'warning' : 'neutral'}>{mode === 'extend' ? 'Past due' : 'No request'}</Badge>
+              <Badge variant="neutral">No request</Badge>
             </label>
           ))}
         </div>
 
-        {/* Open Request: choose a target start date (default current month), per PRD 2.3 */}
-        {mode === 'open' && (
-          <div className="px-6 pb-5 flex flex-col gap-1.5">
-            <FieldLabel required hint="The new hiring request carries this target start date. Defaults to the current hiring period.">Target start date</FieldLabel>
-            <DatePicker value={date} onChange={setDate} minDate={minDate} placeholder="Pick a date" side="top" />
-          </div>
-        )}
+        {/* Target start date (default current month), per PRD 2.3 */}
+        <div className="px-6 pb-5 flex flex-col gap-1.5">
+          <FieldLabel required hint="The new hiring request carries this target start date. Defaults to the current hiring period.">Target start date</FieldLabel>
+          <DatePicker value={date} onChange={setDate} minDate={minDate} placeholder="Pick a date" side="top" />
+        </div>
 
         <div className="border-t border-border" />
         {/* Footer */}
         <div className="px-6 py-4 flex items-center justify-between gap-2">
-          <span className="text-sm text-muted-foreground">{n > 0 ? `${verb}ing ${n} ${n === 1 ? 'position' : 'positions'}.` : 'Select positions to continue.'}</span>
+          <span className="text-sm text-muted-foreground">{n > 0 ? `Opening ${n} ${n === 1 ? 'request' : 'requests'}.` : 'Select positions to continue.'}</span>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button disabled={!canConfirm} onClick={confirm}>{n > 0 ? `${verb} ${n} ${n === 1 ? 'position' : 'positions'}` : `${verb} positions`}</Button>
+            <Button disabled={!canConfirm} onClick={confirm}>{n > 0 ? `Open ${n} ${n === 1 ? 'request' : 'requests'}` : 'Open requests'}</Button>
           </div>
         </div>
       </DialogContent>

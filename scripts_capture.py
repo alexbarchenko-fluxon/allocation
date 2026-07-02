@@ -182,13 +182,13 @@ with sync_playwright() as p:
         save(pg, "06_create_modal")
     except Exception as e: print("create:", e)
 
-    # 07 Extend modal (from Needs review)
+    # 07 Open-request modal (from Needs review; Extend was removed per PRD)
     reset(pg)
     try:
         pg.get_by_role("tab", name=re.compile("Needs review")).first.click(timeout=2500); pg.wait_for_timeout(600)
-        pg.get_by_role("button", name=re.compile("Extend")).first.click(timeout=2500); pg.wait_for_timeout(700)
-        save(pg, "07_extend_modal")
-    except Exception as e: print("extend:", e)
+        pg.get_by_role("button", name=re.compile("Open request")).first.click(timeout=2500); pg.wait_for_timeout(700)
+        save(pg, "07_open_request_modal")
+    except Exception as e: print("open request:", e)
 
     # 08 Close modal (from Needs review)
     reset(pg)

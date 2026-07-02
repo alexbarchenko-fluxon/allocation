@@ -26,14 +26,30 @@ export interface PosRow {
   notes: number;                         // note count (mock until a real notes model exists)
 }
 
-// Deterministic mock note counts until a real notes model exists — ~40% of rows
-// show 1–2 notes so the Notes column reads like the design.
-export function noteCount(id: string): number {
+// Notes on a role-month position row (mirrors the Deals notes pattern).
+export interface PosNote { id: string; author: string; date: string; text: string; isNew?: boolean }
+
+// Deterministic mock notes until a real notes model exists — ~40% of rows carry
+// 1–2 seeded notes so the Notes column and panel section read like the design.
+const SEED_NOTE_TEXTS = [
+  "Talent flagged this req as hard to fill at the current band — open to senior-adjacent candidates if the core skills are there.",
+  "Prioritise India hires to land before the Q3 ramp. Europe can trail a month if needed.",
+  "Backfill context: previous person left mid-project. Recruiting can reuse the old scorecard, role scope unchanged.",
+  "Hiring manager prefers candidates who can overlap 4+ hours with the EU team, timezone matters more than hub.",
+]
+export function seedNotes(id: string): PosNote[] {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
   const r = h % 5;
-  return r >= 3 ? r - 2 : 0; // 3 -> 1 note, 4 -> 2 notes, else none
+  const n = r >= 3 ? r - 2 : 0; // 3 -> 1 note, 4 -> 2 notes, else none
+  return Array.from({ length: n }, (_, i) => ({
+    id: `${id}-note-${i}`,
+    author: i === 0 ? "Kenny L." : "Queenie",
+    date: i === 0 ? "08.06.2026" : "28.05.2026",
+    text: SEED_NOTE_TEXTS[(h + i) % SEED_NOTE_TEXTS.length],
+  }));
 }
+export const noteCount = (id: string) => seedNotes(id).length;
 
 function rowFor(role: Role, mk: string, c: Cell): PosRow {
   const people = cItems(c).filter((p) => (p.status === "started" || p.status === "accepted") && p.person)

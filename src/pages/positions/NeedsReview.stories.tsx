@@ -8,7 +8,6 @@ const meta: Meta<typeof NeedsReview> = {
   parameters: { layout: 'padded' },
   tags: ['autodocs'],
   argTypes: {
-    onExtend: { action: 'extend' },
     onOpenRequest: { action: 'open-request' },
     onClose: { action: 'close' },
   },

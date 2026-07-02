@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { X, Trash2, ExternalLink, ChevronDown } from 'lucide-react'
+import { X, Trash2, ExternalLink, ChevronDown, Plus, NotepadText } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { avatarFor } from '@/lib/positions/avatars'
 import { fmtFull } from '@/lib/positions/time'
 import { isPastDueMonth } from '@/lib/positions/model'
-import { type PosRow, type DetailRecord } from './lib'
+import { type PosRow, type DetailRecord, type PosNote } from './lib'
 
 const EASING = 'cubic-bezier(0.4, 0, 0.2, 1)'
 const SLIDE = '0.35s'
@@ -135,18 +136,63 @@ function ClosedRow({ rec }: { rec: DetailRecord }) {
   )
 }
 
+// Notes accordion — positions flavour of the Deals notes pattern: composer on top,
+// newest first, most recent note highlighted with the primary dot.
+function NotesSection({ notes, onAddNote }: { notes: PosNote[]; onAddNote: (text: string) => void }) {
+  const [open, setOpen] = useState(notes.length > 0)
+  const [text, setText] = useState('')
+  const submit = () => { if (text.trim()) { onAddNote(text.trim()); setText('') } }
+  return (
+    <div className="border-t border-border">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between px-5 py-4">
+        <span className="flex items-center gap-2">
+          <NotepadText className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-foreground">Notes</span>
+          {notes.length > 0 && (
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-medium text-primary-foreground tabular-nums">{notes.length}</span>
+          )}
+        </span>
+        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', !open && '-rotate-90')} />
+      </button>
+      {open && (
+        <div className="flex flex-col gap-3 px-5 pb-4">
+          <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} className="resize-none" placeholder="Add context for BizOps or Talent — priorities, constraints, backfill details…" />
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" className="h-8" disabled={!text.trim()} onClick={submit}>Add note</Button>
+          </div>
+          <div className="flex flex-col">
+            {notes.map((n, i) => (
+              <div key={n.id} className={cn('flex flex-col gap-1.5 rounded-md p-3', i === 0 && notes.length > 1 ? 'bg-electric-blue-50/50' : '')}>
+                <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                  <span>{n.author}</span>
+                  <span className="opacity-50">|</span>
+                  <span>{n.date}</span>
+                  {n.isNew && <span className="ml-auto h-2 w-2 rounded-full bg-primary" />}
+                </div>
+                <p className="text-xs leading-4 text-muted-foreground">{n.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface Props {
   row: PosRow | null
   records: DetailRecord[]
+  notes: PosNote[]
   isOpen: boolean
   onDismiss: () => void
-  onExtend: (recIds: string[]) => void        // past-due records → extend wizard
   onOpenRequest: (recIds: string[]) => void   // no-request records → open-request wizard
   onCloseRecords: (recIds: string[]) => void  // → close wizard (reason required)
+  onNewPosition: () => void                   // footer → create dialog, role prefilled
+  onAddNote: (text: string) => void
   onPerson: (name: string) => void
 }
 
-export function PositionDetailPanel({ row, records, isOpen, onDismiss, onExtend, onOpenRequest, onCloseRecords, onPerson }: Props) {
+export function PositionDetailPanel({ row, records, notes, isOpen, onDismiss, onOpenRequest, onCloseRecords, onNewPosition, onAddNote, onPerson }: Props) {
   const monthPastDue = row ? isPastDueMonth(row.mk) : false
   // In a past month, open items (with a request) are past due — normalise so they land in the right section.
   const recs = records.map((r) => (monthPastDue && r.status === 'open' && !r.noReq ? { ...r, status: 'pending' as const } : r))
@@ -175,7 +221,6 @@ export function PositionDetailPanel({ row, records, isOpen, onDismiss, onExtend,
   })()
 
   const closeableIds = [...openRecs, ...pastDue].map((r) => r.id)
-  const pastDueIds = pastDue.map((r) => r.id)
 
   return (
     <div
@@ -211,11 +256,10 @@ export function PositionDetailPanel({ row, records, isOpen, onDismiss, onExtend,
           </Section>
 
           <Section label="Past due" count={pastDue.length} tone="pending" defaultOpen={pastDue.length > 0}>
-            <p className="mb-1 text-xs leading-4 text-muted-foreground">Target start date has passed. Extend moves it forward to the current month, or close it.</p>
+            <p className="mb-1 text-xs leading-4 text-muted-foreground">Target start date has passed. The request stays open — hiring is just delayed. Close it if we're no longer hiring.</p>
             {pastDueGroups.map((g) => (
               <LocRow key={g.loc} loc={g.loc} count={g.items.length} tone="pending">
                 <CloseIconBtn onClick={() => onCloseRecords(g.items.map((i) => i.id))} label={`Close ${g.loc} ${row?.title ?? ''}`} />
-                <Button variant="outline" size="sm" className="h-8" onClick={() => onExtend(g.items.map((i) => i.id))}>Extend request</Button>
               </LocRow>
             ))}
           </Section>
@@ -225,24 +269,21 @@ export function PositionDetailPanel({ row, records, isOpen, onDismiss, onExtend,
               {closed.map((r) => <ClosedRow key={r.id} rec={r} />)}
             </Section>
           )}
+
+          <NotesSection notes={notes} onAddNote={onAddNote} />
         </div>
 
-        {/* Footer — bulk actions */}
-        {(closeableIds.length > 0 || pastDueIds.length > 0) && (
-          <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border p-4">
-            {closeableIds.length > 0 && (
-              <Button variant="destructive" onClick={() => onCloseRecords(closeableIds)}>
-                <Trash2 className="h-4 w-4" /> Close all
-              </Button>
-            )}
-            {pastDueIds.length > 0 && (
-              <Button onClick={() => onExtend(pastDueIds)}>
-                Extend all requests
-                <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-foreground/20 px-1 text-xs font-medium tabular-nums">{pastDueIds.length}</span>
-              </Button>
-            )}
-          </div>
-        )}
+        {/* Footer — bulk close + add more positions for this role */}
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border p-4">
+          {closeableIds.length > 0 && (
+            <Button variant="destructive" onClick={() => onCloseRecords(closeableIds)}>
+              <Trash2 className="h-4 w-4" /> Close all
+            </Button>
+          )}
+          <Button onClick={onNewPosition}>
+            <Plus className="h-4 w-4" /> New position
+          </Button>
+        </div>
       </div>
     </div>
   )

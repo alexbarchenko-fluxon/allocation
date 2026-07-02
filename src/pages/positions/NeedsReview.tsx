@@ -6,12 +6,11 @@ import { type ReviewItem } from './lib'
 
 interface Props {
   items: ReviewItem[]
-  onExtend: (item: ReviewItem) => void
   onOpenRequest: (item: ReviewItem) => void
   onClose: (item: ReviewItem) => void
 }
 
-export function NeedsReview({ items, onExtend, onOpenRequest, onClose }: Props) {
+export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
   if (items.length === 0) {
     return (
       <div className="rounded-lg border border-border py-16 text-center">
@@ -63,10 +62,11 @@ export function NeedsReview({ items, onExtend, onOpenRequest, onClose }: Props) 
               <td className={cn(cell(3), 'text-muted-foreground')}>{item.age}</td>
               <td className={cell(4)}>
                 <div className="flex items-center justify-end gap-2">
+                  {/* Past-due requests stay open (just delayed) — Close is the only decision. */}
                   <Button variant="ghost" size="sm" className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onClose(item)}><Trash2 className="h-3.5 w-3.5" /> Close</Button>
-                  {item.kind === 'noreq'
-                    ? <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(item)}>Open request</Button>
-                    : <Button variant="outline" size="sm" className="h-8" onClick={() => onExtend(item)}>Extend request</Button>}
+                  {item.kind === 'noreq' && (
+                    <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(item)}>Open request</Button>
+                  )}
                 </div>
               </td>
             </tr>

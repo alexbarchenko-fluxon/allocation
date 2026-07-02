@@ -70,24 +70,10 @@ export function closeRecords(cells: Cells, title: string, mk: string, n: number,
   return { ...cells, [key]: { ...c, items } };
 }
 
-// By-id variants for the detail panel (act on one specific record).
-export function extendOne(cells: Cells, title: string, mk: string, id: string): Cells {
-  const fromKey = cellKey(title, mk);
-  const toKey = cellKey(title, CURRENT_KEY);
-  const from = cells[fromKey];
-  if (!from) return cells;
-  const rec = cItems(from).find((p) => p.id === id);
-  if (!rec) return cells;
-  // No-request record in the current month: just raise the request in place.
-  if (rec.noReq && mk === CURRENT_KEY) return openRequest(cells, title, mk, 1);
-  const remaining = cItems(from).filter((p) => p.id !== id);
-  const moved = { ...rec, status: "open" as const, opened: TODAY, noReq: false };
-  const to = cells[toKey] ?? { total: 0, filled: 0, loc: {}, items: [], opened: TODAY };
-  const next: Cells = { ...cells, [toKey]: { ...to, opened: to.opened || TODAY, items: [...cItems(to), moved] } };
-  if (remaining.length === 0) delete next[fromKey]; else next[fromKey] = { ...from, items: remaining };
-  return next;
-}
+// "Extend" was removed per PRD: a late request keeps its target date — the request
+// stays open in its target month and simply reads as delayed. Close is the only move.
 
+// By-id variants for the detail panel (act on one specific record).
 export function closeOne(cells: Cells, title: string, mk: string, id: string, reason: string): Cells {
   const key = cellKey(title, mk);
   const c = cells[key];
