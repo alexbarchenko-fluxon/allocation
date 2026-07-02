@@ -122,6 +122,8 @@ def wrap(css, body, lang):
 <body style="width:1512px">{body}</body></html>"""
 
 def save(page, name):
+    # The floating flask is a personal dev toggle — keep it out of design exports.
+    page.evaluate("document.querySelectorAll('button[aria-label*=\"list-based\"]').forEach(b => b.remove())")
     data = page.evaluate(SERIALIZE)
     html = wrap(data["css"], data["bodyHTML"], data["lang"])
     path = os.path.join(OUT, f"{name}.html")
@@ -190,11 +192,11 @@ with sync_playwright() as p:
         save(pg, "07_open_request_modal")
     except Exception as e: print("open request:", e)
 
-    # 08 Close modal (from Needs review)
+    # 08 Close modal (from Needs review — per-row close is an icon labelled "Close <role>")
     reset(pg)
     try:
         pg.get_by_role("tab", name=re.compile("Needs review")).first.click(timeout=2500); pg.wait_for_timeout(600)
-        pg.get_by_role("button", name=re.compile(r"^\s*Close\s*$")).first.click(timeout=2500); pg.wait_for_timeout(700)
+        pg.get_by_role("button", name=re.compile(r"^Close .")).first.click(timeout=2500); pg.wait_for_timeout(700)
         save(pg, "08_close_modal")
     except Exception as e: print("close:", e)
 
@@ -227,6 +229,23 @@ with sync_playwright() as p:
         pg.get_by_text(re.compile(r"^0 / 6$")).first.click(timeout=2500); pg.wait_for_timeout(800)
         save(pg, "13_detail_panel_open")
     except Exception as e: print("detail open:", e)
+
+    # 14 List-based create modal (experimental, AJ's proposal) — default single line.
+    reset(pg)
+    try:
+        pg.get_by_role("button", name=re.compile("list-based")).first.click(timeout=2500); pg.wait_for_timeout(700)
+        save(pg, "14_create_list_modal")
+    except Exception as e: print("list modal:", e)
+
+    # 15 List-based create modal — multi-line batch (3 lines, one count bumped).
+    reset(pg)
+    try:
+        pg.get_by_role("button", name=re.compile("list-based")).first.click(timeout=2500); pg.wait_for_timeout(600)
+        pg.get_by_role("button", name="Add position").click(timeout=2500); pg.wait_for_timeout(300)
+        pg.get_by_role("button", name="Add position").click(timeout=2500); pg.wait_for_timeout(300)
+        pg.get_by_label("More").first.click(timeout=2500); pg.wait_for_timeout(400)
+        save(pg, "15_create_list_modal_batch")
+    except Exception as e: print("list modal batch:", e)
 
     b.close()
 print("DONE")
