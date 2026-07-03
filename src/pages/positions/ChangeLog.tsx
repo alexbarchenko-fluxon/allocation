@@ -1,36 +1,30 @@
 import { X, History } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { avatarFor } from '@/lib/positions/avatars'
 import { type ActivityItem } from '@/lib/positions/seed'
 
 const EASING = 'cubic-bezier(0.4, 0, 0.2, 1)'
 const SLIDE = '0.35s'
 
-// Systems get a small colored dot; people get an avatar photo (or initials chip).
-const SYSTEM_TONE: Record<string, string> = {
-  Allox: 'var(--primary)',
-  Greenhouse: 'var(--electric-blue-600)',
-  Spark: 'var(--badge-warning-fg)',
-}
+// People get an avatar photo or an initials chip; system actors are plain text.
+const SYSTEMS = ['Allox', 'Greenhouse', 'Spark']
 const INITIALS_TONE = ['var(--chart-4)', 'var(--badge-success-fg)', 'var(--primary)', 'var(--chart-2)']
-const isSystem = (actor: string) => actor in SYSTEM_TONE
+const isSystem = (actor: string) => SYSTEMS.includes(actor)
 function initials(name: string) {
   const clean = name.replace(/\([^)]*\)/, '').trim() || name
   const parts = clean.split(/\s+/)
   return (parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')
 }
-function ActorGlyph({ actor }: { actor: string }) {
-  if (isSystem(actor)) {
-    return <span className="h-2 w-2 shrink-0 mt-2 rounded-full" style={{ background: SYSTEM_TONE[actor] }} />
-  }
-  // Person: "BizOps (Queenie)" gets a photo (seed = inner name); a bare name gets an initials chip.
+function ActorAvatar({ actor }: { actor: string }) {
+  // "BizOps (Queenie)" gets a photo (seed = inner name); a bare name gets an initials chip.
   const m = actor.match(/\(([^)]+)\)/)
   if (m) {
-    return <img src={avatarFor(m[1])} alt={actor} className="h-7 w-7 shrink-0 rounded-full object-cover" />
+    return <img src={avatarFor(m[1])} alt={actor} className="h-6 w-6 shrink-0 rounded-full object-cover" />
   }
   const tone = INITIALS_TONE[(initials(actor).charCodeAt(0) || 0) % INITIALS_TONE.length]
   return (
-    <span className="h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-[11px] font-semibold text-white uppercase" style={{ background: tone }}>
+    <span className="h-6 w-6 shrink-0 rounded-full flex items-center justify-center text-[10px] font-semibold text-white uppercase" style={{ background: tone }}>
       {initials(actor)}
     </span>
   )
@@ -57,21 +51,25 @@ export function ChangeLog({ entries, isOpen, onClose }: Props) {
           <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0"><X /></Button>
         </div>
 
-        <div className="overflow-y-auto scrollbar-minimal flex-1 px-5 py-2">
+        <div className="overflow-y-auto scrollbar-minimal flex-1 px-4 py-3">
           {entries.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">No activity yet.</p>
           ) : (
-            <ol className="flex flex-col">
-              {entries.map((e) => (
-                <li key={e.id} className="flex gap-3 py-3 border-b border-border last:border-b-0">
-                  <ActorGlyph actor={e.actor} />
-                  <div className="flex flex-col gap-1 min-w-0 flex-1">
-                    <span className="text-xs text-muted-foreground">{e.ts}</span>
-                    <p className="text-sm text-foreground leading-snug">
-                      <span className="font-semibold">{e.actor}</span>{' '}
-                      <span className="text-muted-foreground">{e.action}</span>
-                    </p>
+            <ol className="flex flex-col gap-1">
+              {entries.map((e, idx) => (
+                // Note-card pattern (same as Deals notes): the newest entry is
+                // highlighted with the unread dot.
+                <li key={e.id} className={cn('rounded-md p-3 flex flex-col gap-1.5', idx === 0 ? 'bg-[rgba(231,235,255,0.5)]' : 'bg-transparent')}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      {!isSystem(e.actor) && <ActorAvatar actor={e.actor} />}
+                      <span className="truncate text-xs font-medium text-foreground">{e.actor}</span>
+                      <span className="text-xs text-muted-foreground/60">|</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{e.ts}</span>
+                    </div>
+                    {idx === 0 && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
                   </div>
+                  <p className="text-sm text-muted-foreground leading-snug">{e.action}</p>
                 </li>
               ))}
             </ol>

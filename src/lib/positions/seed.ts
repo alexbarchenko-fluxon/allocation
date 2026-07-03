@@ -60,11 +60,11 @@ export function makeSeedCells(): Cells {
 
 export interface ActivityItem { id: number; actor: string; auto?: boolean; action: string; ts: string }
 export const SEED_ACTIVITY: ActivityItem[] = [
-  { id: 0, actor: "Allox", auto: true, action: "1 Product Designer hiring request reached its May 2026 target unfilled, marked past due. It stays in May for BizOps to review, Talent keeps working it until closed.", ts: "Jun 1, 00:00" },
-  { id: 6, actor: "Allox", auto: true, action: "Engineering Manager position reopened, Marta K. left the role on Jun 9. Awaiting BizOps decision on whether to file a hiring request.", ts: "Jun 9, 17:30" },
-  { id: 1, actor: "Greenhouse", auto: true, action: "Offer accepted, Senior Software Engineer marked filled for June 2026 (+1)", ts: "Today, 09:41" },
-  { id: 2, actor: "Kenny L.", action: "closed 2 × Senior Software Engineer for August 2026, reduced from 8 to 6", ts: "Yesterday, 16:20" },
-  { id: 3, actor: "BizOps (Queenie)", action: "opened 22 positions for August 2026 across Engineering, Product, Design and QA, sent to Spark", ts: "Jun 5, 11:02" },
-  { id: 4, actor: "Greenhouse", auto: true, action: "Offer accepted, Product Manager marked filled for July 2026 (+1)", ts: "Jun 4, 15:18" },
-  { id: 5, actor: "BizOps (Queenie)", action: "opened 8 positions for June 2026, sent to Spark", ts: "May 18, 09:10" },
+  { id: 0, actor: "Allox", auto: true, action: "1 Product Designer hiring request reached its May 2026 target unfilled, marked past due. It stays in May for BizOps to review, Talent keeps working it until closed.", ts: "01.06.2026" },
+  { id: 6, actor: "Allox", auto: true, action: "Engineering Manager position reopened, Marta K. left the role on Jun 9. Awaiting BizOps decision on whether to file a hiring request.", ts: "09.06.2026" },
+  { id: 1, actor: "Greenhouse", auto: true, action: "Offer accepted, Senior Software Engineer marked filled for June 2026 (+1)", ts: "10.06.2026" },
+  { id: 2, actor: "Kenny L.", action: "closed 2 × Senior Software Engineer for August 2026, reduced from 8 to 6", ts: "09.06.2026" },
+  { id: 3, actor: "BizOps (Queenie)", action: "opened 22 positions for August 2026 across Engineering, Product, Design and QA, sent to Spark", ts: "05.06.2026" },
+  { id: 4, actor: "Greenhouse", auto: true, action: "Offer accepted, Product Manager marked filled for July 2026 (+1)", ts: "04.06.2026" },
+  { id: 5, actor: "BizOps (Queenie)", action: "opened 8 positions for June 2026, sent to Spark", ts: "18.05.2026" },
 ];

@@ -17,9 +17,8 @@ export default meta
 type Story = StoryObj<typeof CreateDialogList>
 
 /**
- * Experimental list-based create (AJ's proposal): one line per role + location + count,
- * add lines for different roles/locations, open everything in one go. Lives behind the
- * flask button next to "New position" for comparison against the classic dialog.
+ * The default create flow (Figma 274-33410): one line per role + location + count,
+ * "Add position" adds lines, one hiring-request switch + start date for the batch.
  */
 export const Default: Story = {}
 

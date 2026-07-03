@@ -83,7 +83,8 @@ function LocRow({ loc, count, tone, children }: { loc: string; count: number; to
       <span className="flex min-w-0 items-center gap-1.5">
         <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: LOC_TOKEN[loc] ?? 'var(--muted-foreground)' }} />
         <span className="truncate text-sm font-medium text-foreground" title={loc}>{loc}</span>
-        {count > 1 && <CountBadge n={count} tone={tone} />}
+        {/* Badge shows even at 1 — reviewers read the bare name as ambiguous (Brandon, item 4). */}
+        <CountBadge n={count} tone={tone} />
       </span>
       <span className="flex shrink-0 items-center gap-2">{children}</span>
     </div>
@@ -136,6 +137,19 @@ function ClosedRow({ rec }: { rec: DetailRecord }) {
   )
 }
 
+// Note authors get an initials chip, same tones as the change log avatars.
+const NOTE_TONE = ['var(--chart-4)', 'var(--badge-success-fg)', 'var(--primary)', 'var(--chart-2)']
+function NoteAvatar({ name }: { name: string }) {
+  const parts = name.trim().split(/\s+/)
+  const ini = (parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')
+  const tone = NOTE_TONE[(ini.charCodeAt(0) || 0) % NOTE_TONE.length]
+  return (
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold uppercase text-white" style={{ background: tone }}>
+      {ini}
+    </span>
+  )
+}
+
 // Notes accordion — positions flavour of the Deals notes pattern: composer on top,
 // newest first, most recent note highlighted with the primary dot.
 function NotesSection({ notes, onAddNote }: { notes: PosNote[]; onAddNote: (text: string) => void }) {
@@ -160,14 +174,16 @@ function NotesSection({ notes, onAddNote }: { notes: PosNote[]; onAddNote: (text
           <div className="flex justify-end">
             <Button variant="outline" size="sm" className="h-8" disabled={!text.trim()} onClick={submit}>Add note</Button>
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-1">
             {notes.map((n, i) => (
-              <div key={n.id} className={cn('flex flex-col gap-1.5 rounded-md p-3', i === 0 && notes.length > 1 ? 'bg-electric-blue-50/50' : '')}>
-                <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                  <span>{n.author}</span>
-                  <span className="opacity-50">|</span>
-                  <span>{n.date}</span>
-                  {n.isNew && <span className="ml-auto h-2 w-2 rounded-full bg-primary" />}
+              // Note-card pattern shared with the change log: newest card highlighted + dot.
+              <div key={n.id} className={cn('flex flex-col gap-1.5 rounded-md p-3', i === 0 ? 'bg-[rgba(231,235,255,0.5)]' : 'bg-transparent')}>
+                <div className="flex items-center gap-2 text-xs">
+                  <NoteAvatar name={n.author} />
+                  <span className="font-medium text-foreground">{n.author}</span>
+                  <span className="text-muted-foreground/60">|</span>
+                  <span className="text-muted-foreground">{n.date}</span>
+                  {i === 0 && <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-primary" />}
                 </div>
                 <p className="text-xs leading-4 text-muted-foreground">{n.text}</p>
               </div>

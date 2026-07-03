@@ -34,13 +34,13 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
         </colgroup>
         <thead>
           <tr>
-            {['Role', 'Target month', 'Location', 'Status', 'Open for', ''].map((h, idx) => (
+            {['Role', 'Target month', 'Location', 'Status', 'Open for', 'Actions'].map((h, idx) => (
               <th
-                key={h || 'actions'}
+                key={h}
                 className={cn(
                   'h-12 bg-primary-foreground text-sm font-medium text-muted-foreground whitespace-nowrap border-b border-border text-left',
                   idx === 0 ? 'pl-4 pr-3' : 'px-3',
-                  idx > 0 && idx < 5 && 'border-l border-border',
+                  idx > 0 && 'border-l border-border',
                 )}
               >
                 {h}
@@ -70,7 +70,7 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
                   : <Badge variant="warning">Past due</Badge>}
               </td>
               <td className={cn(cell(4), 'text-muted-foreground')}>{item.age}</td>
-              <td className="h-12 px-3 pr-4 text-sm">
+              <td className={cell(5)}>
                 <div className="flex items-center justify-end gap-2">
                   {item.kind === 'noreq' && (
                     // Zap = "send to Spark", the metaphor the create dialog already established.

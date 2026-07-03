@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MOCK_PEOPLE } from '@/mocks/people'
-import { Plus, History, Search, FlaskConical } from 'lucide-react'
+import { Plus, History, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { FilterMultiSelect } from '@/components/ui/filter-multiselect'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DEPTS } from '@/lib/positions/roles'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { makeSeedCells, SEED_ACTIVITY, type ActivityItem } from '@/lib/positions/seed'
@@ -18,7 +19,6 @@ import { NeedsReview } from './positions/NeedsReview'
 import { PlanGrid } from './positions/PlanGrid'
 import { PlanToolbar } from './positions/PlanToolbar'
 import { MetricCards } from './positions/MetricCards'
-import { CreateDialog } from './positions/CreateDialog'
 import { CreateDialogList, type CreateLine } from './positions/CreateDialogList'
 import { CloseWizard } from './positions/CloseWizard'
 import { OpenRequestWizard } from './positions/OpenRequestWizard'
@@ -40,8 +40,8 @@ function PositionsPageInner() {
   const navigate = useNavigate()
   const { push } = useToast()
   const [tab, setTab] = useState('plan')
-  const [posDept, setPosDept] = useState<string[]>([])
-  const [posStatus, setPosStatus] = useState<string[]>([])
+  const [posDept, setPosDept] = useState('All')
+  const [posStatus, setPosStatus] = useState('all')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
 
@@ -49,18 +49,17 @@ function PositionsPageInner() {
   const [activity, setActivity] = useState<ActivityItem[]>(() => SEED_ACTIVITY)
   const [logOpen, setLogOpen] = useState(false)
   const log = useCallback((action: string) => {
-    setActivity((a) => [{ id: Date.now() + Math.random(), actor: 'Volodymyr S.', action, ts: 'Just now' }, ...a])
+    setActivity((a) => [{ id: Date.now() + Math.random(), actor: 'Volodymyr S.', action, ts: TODAY.split('-').reverse().join('.') }, ...a])
   }, [])
   const sections = useMemo(
     () => {
-      let rows = unifiedRows(cells, search, 'All', false)
-      if (posDept.length) rows = rows.filter((r) => posDept.includes(r.dept))
-      if (posStatus.length) rows = rows.filter((r) => posStatus.some((s) =>
-        s === 'filled' ? r.filled > 0 :
-        s === 'open' ? r.open > 0 :
-        s === 'pending' ? r.pending > 0 :
-        s === 'noreq' ? r.noReq > 0 : false
-      ))
+      let rows = unifiedRows(cells, search, posDept, false)
+      if (posStatus !== 'all') rows = rows.filter((r) =>
+        posStatus === 'filled' ? r.filled > 0 :
+        posStatus === 'open' ? r.open > 0 :
+        posStatus === 'pending' ? r.pending > 0 :
+        posStatus === 'noreq' ? r.noReq > 0 : true
+      )
       return groupByDept(rows)
     },
     [cells, search, posDept, posStatus],
@@ -193,21 +192,10 @@ function PositionsPageInner() {
       { title: `Raised ${n} ${n === 1 ? 'request' : 'requests'}`, desc: `${r.title} sent to Spark, target start ${tLabel}.` })
   }, [reqRow, run])
 
-  // Create
+  // Create — the list-based dialog (one line per role + location + count) is the default flow.
   const [createOpen, setCreateOpen] = useState(false)
   const [createPrefill, setCreatePrefill] = useState<string | undefined>(undefined)
-  const onCreate = useCallback((title: string, raiseRequest: boolean, startISO: string | null, loc: { India: number; Europe: number; "North America": number }, total: number) => {
-    const n = total
-    const msg = raiseRequest
-      ? `opened ${n} × ${title}${startISO ? `, target start ${monthFull(startISO.slice(0, 7))}` : ''}, sent to Spark`
-      : `added ${n} × ${title} as an internal move, no hiring request`
-    run((cs) => createPositions(cs, title, raiseRequest, startISO, loc, total), msg,
-      { title: `Opened ${n} ${n === 1 ? 'position' : 'positions'}`, desc: raiseRequest ? `${title} sent to Spark for recruiting.` : `${title} added as an internal move.` })
-  }, [run])
   const openCreateFor = (title: string) => { setCreatePrefill(title); setCreateOpen(true) }
-
-  // Experimental list-based create (AJ's proposal) — flask button, for comparison testing.
-  const [createListOpen, setCreateListOpen] = useState(false)
   const onCreateList = useCallback((lines: CreateLine[], raiseRequest: boolean, startISO: string | null) => {
     const total = lines.reduce((s, l) => s + l.count, 0)
     const roles = new Set(lines.map((l) => l.title)).size
@@ -262,10 +250,10 @@ function PositionsPageInner() {
                       {reviewCount > 0 && <Badge variant="warning" className="ml-2">{reviewCount}</Badge>}
                     </TabsTrigger>
                   </TabsList>
-                  {tab === 'plan' && (
+                  {(tab === 'plan' || tab === 'positions') && (
                     <div className="relative w-[220px]">
                       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" className="h-9 pl-8" />
+                      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tab === 'plan' ? 'Search' : 'Search roles'} className="h-9 pl-8" />
                     </div>
                   )}
                 </div>
@@ -285,16 +273,24 @@ function PositionsPageInner() {
                 )}
                 {tab === 'positions' && (
                   <div className="flex items-center gap-3">
-                    <FilterMultiSelect label="Department" value={posDept} onChange={setPosDept}
-                      options={DEPTS.filter((d) => d !== 'All').map((d) => ({ value: d, label: d }))} />
-                    <FilterMultiSelect label="Status" value={posStatus} onChange={setPosStatus}
-                      options={[{ value: 'filled', label: 'Filled' }, { value: 'open', label: 'Open' }, { value: 'pending', label: 'Past due' }, { value: 'noreq', label: 'No request' }]} />
-                    <Input
-                      placeholder="Search roles"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="w-[200px] h-9"
-                    />
+                    <Select value={posStatus} onValueChange={setPosStatus}>
+                      <SelectTrigger className="h-9 w-[150px]">
+                        {posStatus === 'all' ? 'Role status' : <SelectValue />}
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All statuses</SelectItem>
+                        <SelectItem value="open">Open</SelectItem>
+                        <SelectItem value="filled">Filled</SelectItem>
+                        <SelectItem value="pending">Past due</SelectItem>
+                        <SelectItem value="noreq">No request</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={posDept} onValueChange={setPosDept}>
+                      <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {DEPTS.map((d) => <SelectItem key={d} value={d}>{d === 'All' ? 'All departments' : d}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
                 {tab === 'needs' && (
@@ -351,19 +347,7 @@ function PositionsPageInner() {
 
       <ChangeLog entries={activity} isOpen={logOpen} onClose={() => setLogOpen(false)} />
 
-      <CreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={onCreate} defaultTitle={createPrefill} />
-      <CreateDialogList open={createListOpen} onOpenChange={setCreateListOpen} onCreate={onCreateList} />
-
-      {/* Experimental list-based create — floating flask, deliberately out of the way. */}
-      <button
-        type="button"
-        onClick={() => setCreateListOpen(true)}
-        title="New positions (list-based, experimental)"
-        aria-label="New positions (list-based, experimental)"
-        className="fixed bottom-4 right-4 z-50 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-muted-foreground/50 shadow-sm transition-all hover:text-foreground hover:shadow-md"
-      >
-        <FlaskConical className="h-4 w-4" />
-      </button>
+      <CreateDialogList open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) setCreatePrefill(undefined) }} onCreate={onCreateList} defaultTitle={createPrefill} />
 
       <CloseWizard
         open={!!closeRow}

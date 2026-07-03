@@ -73,12 +73,16 @@ export function CreateDialogList({ open, onOpenChange, onCreate, defaultTitle }:
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>New positions</DialogTitle>
-          <DialogDescription>One line per position type — role, location, and how many. Add lines for different roles or locations.</DialogDescription>
+          <DialogDescription>Set the position details, then choose whether to raise a hiring request now.</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-3 py-2 overflow-y-auto scrollbar-minimal flex-1 min-h-0">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-foreground">Add positions</span>
+            <Button variant="secondary" size="sm" onClick={() => setLines((ls) => [...ls, newLine(ls[ls.length - 1]?.title)])}>Add position</Button>
+          </div>
           {lines.map((line, idx) => (
-            <div key={idx} className="flex items-center gap-2 rounded-lg border border-border p-3">
+            <div key={idx} className="flex items-center gap-2">
               <div className="flex-1 min-w-0">
                 <Select value={line.title} onValueChange={(v) => patch(idx, { title: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -130,10 +134,6 @@ export function CreateDialogList({ open, onOpenChange, onCreate, defaultTitle }:
             </div>
           ))}
 
-          <Button variant="outline" size="sm" className="self-start" onClick={() => setLines((ls) => [...ls, newLine(ls[ls.length - 1]?.title)])}>
-            <Plus className="h-4 w-4" /> Add position
-          </Button>
-
           {/* Hiring request, gated by the toggle — same grammar as the classic dialog */}
           <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
             <div className="flex items-start justify-between gap-3">
@@ -145,7 +145,7 @@ export function CreateDialogList({ open, onOpenChange, onCreate, defaultTitle }:
             </div>
             {raiseRequest && (
               <div className="flex flex-col gap-2.5 pt-1">
-                <FieldLabel required hint="Every request in this batch carries this target start date.">Target start date</FieldLabel>
+                <FieldLabel hint="Every request in this batch carries this target start date. The positions count toward that month's plan.">Start date</FieldLabel>
                 <DatePicker value={date} onChange={setDate} minDate={minDate} placeholder="Pick a date" side="top" />
               </div>
             )}

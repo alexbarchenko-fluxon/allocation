@@ -16,7 +16,7 @@ const meta: Meta<typeof CreateDialog> = {
 export default meta
 type Story = StoryObj<typeof CreateDialog>
 
-/** The new-positions dialog: role, location split, count, and hiring-request toggle. */
+/** Legacy create flow (count + location split) — replaced by CreateDialogList as the default; kept for usability-test comparison. */
 export const Default: Story = {}
 
 /** Pre-filled with a role (e.g. opened from an empty grid cell). */

@@ -119,14 +119,13 @@ export function PlanGrid({ groups, rollups, months, search, onCellClick, onCreat
                         const needsFlag = !cell.past && cell.noReq > 0
                         const pendingFlag = !cell.past && cell.noReq === 0 && cell.pending > 0
                         const reopened = !cell.past && cell.reopened
-                        const future = cell.mk > CURRENT_KEY
                         return (
                           <div key={cell.mk} className={cn('shrink-0', pad)} style={{ flex: 1, minWidth: 150 }}>
                             <button onClick={() => onCellClick(row.title, cell.mk)}
                               className={cn('relative w-full h-[52px] rounded-lg border flex flex-col items-center justify-center transition-all hover:shadow-sm',
                                 pastDue ? 'border-badge-warning-stroke bg-badge-warning/60' :
-                                future ? 'border-border bg-background hover:bg-extended-hover' :
-                                'border-border bg-background hover:bg-extended-hover')}>
+                                // Populated cells carry a light accent tint so activity pops against empty slots.
+                                'border-border bg-[rgba(231,235,255,0.5)] hover:bg-[rgba(231,235,255,0.85)]')}>
                               {(pastDue || pendingFlag) && (
                                 <Tooltip><TooltipTrigger asChild>
                                   <span className="absolute -top-1 -right-1 flex items-center justify-center h-3.5 w-3.5 rounded-full bg-badge-warning-fg text-white ring-2 ring-background"><History className="h-2 w-2" /></span>
