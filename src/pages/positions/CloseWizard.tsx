@@ -26,11 +26,14 @@ export function CloseWizard({ open, onOpenChange, title, dept, monthLabel, recor
   const [picked, setPicked] = useState<Record<string, boolean>>({})
   const [note, setNote] = useState('')
 
+  // With a single position there's nothing to pick — the wizard opens straight on Reason.
+  const single = records.length === 1
+
   useEffect(() => {
     if (open) {
       // Preselect every position passed in — clicking "Close" should open with the
       // position(s) already checked, ready to confirm (still editable before closing).
-      setStep(0); setNote('')
+      setStep(records.length === 1 ? 1 : 0); setNote('')
       setPicked(Object.fromEntries(records.map((r) => [r.id, true])))
     }
   }, [open]) // eslint-disable-line
@@ -69,15 +72,17 @@ export function CloseWizard({ open, onOpenChange, title, dept, monthLabel, recor
               <p className="text-sm text-muted-foreground">{dept} · {monthLabel} · {breakdown}</p>
             </div>
           </div>
-          {/* Step rail */}
-          <div className="flex gap-3 mt-5">
-            {['Pick positions', 'Reason'].map((label, i) => (
-              <div key={label} className="flex-1 flex flex-col gap-1.5">
-                <div className={cn('h-1 rounded-full transition-colors', i <= step ? 'bg-primary' : 'bg-electric-blue-100')} />
-                <span className={cn('text-sm font-medium', i === step ? 'text-primary' : 'text-muted-foreground')}>{label}</span>
-              </div>
-            ))}
-          </div>
+          {/* Step rail — only when there's actually something to pick */}
+          {!single && (
+            <div className="flex gap-3 mt-5">
+              {['Pick positions', 'Reason'].map((label, i) => (
+                <div key={label} className="flex-1 flex flex-col gap-1.5">
+                  <div className={cn('h-1 rounded-full transition-colors', i <= step ? 'bg-primary' : 'bg-electric-blue-100')} />
+                  <span className={cn('text-sm font-medium', i === step ? 'text-primary' : 'text-muted-foreground')}>{label}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="border-t border-border" />
@@ -110,6 +115,17 @@ export function CloseWizard({ open, onOpenChange, title, dept, monthLabel, recor
             </div>
           ) : (
             <div className="flex flex-col gap-4">
+              {/* Single position: show what's being closed instead of asking to pick it */}
+              {single && records[0] && (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-4">
+                  <span className="text-sm font-medium text-foreground">{records[0].loc}</span>
+                  {records[0].status === 'pending'
+                    ? <Badge variant="warning">Past due</Badge>
+                    : records[0].noReq
+                    ? <Badge variant="neutral">No request</Badge>
+                    : <Badge variant="outline" className="border-transparent bg-electric-blue-50 text-foreground">Open</Badge>}
+                </div>
+              )}
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs text-muted-foreground">Quick fill, or write your own below</span>
                 <div className="flex flex-wrap gap-2">
@@ -137,7 +153,7 @@ export function CloseWizard({ open, onOpenChange, title, dept, monthLabel, recor
 
         {/* Footer */}
         <div className="px-6 py-4 flex items-center justify-between">
-          {step === 0
+          {step === 0 || single
             ? <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             : <Button variant="outline" onClick={() => setStep(0)}>Back</Button>}
           {step === 0

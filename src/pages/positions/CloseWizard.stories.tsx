@@ -38,3 +38,14 @@ export const WithProtectedFilled: Story = {
     filledCount: closeProtectedFilledCount,
   },
 }
+
+/** A single position — no pick step, opens straight on Reason with the position summarised. */
+export const SinglePosition: Story = {
+  args: {
+    title: 'Senior Software Engineer',
+    dept: 'Engineering',
+    monthLabel: 'August 2026',
+    records: closeRecords.slice(0, 1),
+    filledCount: 0,
+  },
+}
