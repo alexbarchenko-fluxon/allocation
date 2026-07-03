@@ -1,5 +1,6 @@
 import { Trash2, Zap } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { type ReviewItem } from './lib'
 
@@ -27,6 +28,7 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
   const cell = (idx: number) => cn('h-12 px-3 text-sm', idx > 0 && 'border-l border-border')
 
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="overflow-hidden rounded-lg border border-border">
       <table className="w-full border-collapse">
         <colgroup>
@@ -74,26 +76,35 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
                 <div className="flex items-center justify-end gap-2">
                   {item.kind === 'noreq' && (
                     // Zap = "send to Spark", the metaphor the create dialog already established.
-                    <button
-                      type="button"
-                      onClick={() => onOpenRequest(item)}
-                      title="Open request — sends to Spark"
-                      aria-label={`Open request for ${item.title}`}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-electric-blue-50 hover:text-electric-blue-600"
-                    >
-                      <Zap className="h-4 w-4" />
-                    </button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => onOpenRequest(item)}
+                          aria-label={`Open request for ${item.title}`}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-electric-blue-50 hover:text-electric-blue-600"
+                        >
+                          <Zap className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Open hiring request — sends to Spark</TooltipContent>
+                    </Tooltip>
                   )}
                   {/* Trash is always the rightmost element, aligned across rows — same as the
                       Positions table's trailing Settings column. Past-due rows: Close only. */}
-                  <button
-                    type="button"
-                    onClick={() => onClose(item)}
-                    aria-label={`Close ${item.title}`}
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-badge-error-fg"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => onClose(item)}
+                        aria-label={`Close ${item.title}`}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-badge-error-fg"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Close position — reason required</TooltipContent>
+                  </Tooltip>
                 </div>
               </td>
             </tr>
@@ -101,5 +112,6 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
         </tbody>
       </table>
     </div>
+    </TooltipProvider>
   )
 }

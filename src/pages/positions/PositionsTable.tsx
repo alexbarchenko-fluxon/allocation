@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Trash2, ClipboardList, ChevronsUpDown, ChevronUp, ChevronDown } from 'lucide-react'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { StageSeparatorRow } from '@/components/deals/table/StageSeparatorRow'
@@ -133,6 +134,7 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
   const cellCls = (idx: number) => cn('h-12 px-3 text-sm', idx > 0 && 'border-l border-border')
 
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="overflow-hidden rounded-lg border border-border">
       <table className="w-full border-collapse">
         <colgroup>
@@ -229,14 +231,19 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
                           return (
                             <td key={c.id} className={cls}>
                               {row.open + row.pending > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); onRowClose?.(row) }}
-                                  aria-label={`Close ${row.title}`}
-                                  className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-badge-error-fg"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); onRowClose?.(row) }}
+                                      aria-label={`Close ${row.title}`}
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-badge-error-fg"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Close position — reason required</TooltipContent>
+                                </Tooltip>
                               )}
                             </td>
                           )
@@ -252,5 +259,6 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
         </tbody>
       </table>
     </div>
+    </TooltipProvider>
   )
 }
