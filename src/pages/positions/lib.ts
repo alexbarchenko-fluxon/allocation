@@ -117,10 +117,17 @@ export function recordsForRow(cells: Cells, rowId: string): DetailRecord[] {
     .sort((a, b) => order[a.status] - order[b.status]);
 }
 
-// Needs review queue: one item per role-month with no-request or past-due positions.
+// Needs review queue at decision grain: one item per role × month × location × kind.
+// A location group is the unit you'd actually act on (you never close half of
+// "2 Europe past due"), and each row carries the exact record ids it covers so
+// the wizards open pre-scoped.
 export interface ReviewItem {
-  id: string; title: string; dept: string; mk: string; monthLabel: string;
+  id: string;              // title|mk|loc|kind — unique row key
+  rowId: string;           // title|mk — the PosRow this belongs to
+  title: string; dept: string; mk: string; monthLabel: string;
+  loc: string;
   kind: "noreq" | "pending"; n: number; days: number; age: string;
+  recIds: string[];
 }
 export function needsReviewItems(cells: Cells): ReviewItem[] {
   const out: ReviewItem[] = [];
@@ -128,16 +135,26 @@ export function needsReviewItems(cells: Cells): ReviewItem[] {
     for (const m of TIMELINE) {
       const c = cells[cellKey(role.title, m.key)];
       if (!c) continue;
-      const noReq = cNoReq(c);
-      const pastDueHere = isPastDueMonth(m.key) ? cItems(c).filter((p) => (p.status === "open" || p.status === "pending") && !p.noReq).length : cItems(c).filter((p) => p.status === "pending").length;
-      if (noReq <= 0 && pastDueHere <= 0) continue;
-      out.push({
-        id: cellKey(role.title, m.key), title: role.title, dept: role.dept, mk: m.key,
-        monthLabel: monthFull(m.key),
-        kind: noReq > 0 ? "noreq" : "pending",
-        n: noReq > 0 ? noReq : pastDueHere,
-        days: daysOpen(c), age: openAgeLabel(c),
-      });
+      const actionable = cItems(c).filter((p) => p.status === "open" || p.status === "pending");
+      const noReqRecs = actionable.filter((p) => p.noReq);
+      const pastDueRecs = actionable.filter((p) => !p.noReq && (isPastDueMonth(m.key) || p.status === "pending"));
+      const emit = (kind: "noreq" | "pending", recs: typeof actionable) => {
+        const byLoc = new Map<string, typeof actionable>();
+        recs.forEach((r) => { const k = r.loc || "Unassigned"; if (!byLoc.has(k)) byLoc.set(k, []); byLoc.get(k)!.push(r); });
+        for (const [loc, list] of byLoc) {
+          out.push({
+            id: `${cellKey(role.title, m.key)}|${loc}|${kind}`,
+            rowId: cellKey(role.title, m.key),
+            title: role.title, dept: role.dept, mk: m.key,
+            monthLabel: monthFull(m.key),
+            loc, kind, n: list.length,
+            days: daysOpen(c), age: openAgeLabel(c),
+            recIds: list.map((r) => r.id),
+          });
+        }
+      };
+      emit("pending", pastDueRecs);
+      emit("noreq", noReqRecs);
     }
   }
   return out.sort((a, b) => b.days - a.days);

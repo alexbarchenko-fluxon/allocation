@@ -3,6 +3,11 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { type ReviewItem } from './lib'
 
+// Location colours are dedicated tokens, deliberately off the status palette.
+const LOC_TOKEN: Record<string, string> = {
+  India: 'var(--loc-india)', Europe: 'var(--loc-europe)', 'North America': 'var(--loc-north-america)',
+}
+
 interface Props {
   items: ReviewItem[]
   onOpenRequest: (item: ReviewItem) => void
@@ -25,17 +30,17 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
     <div className="overflow-hidden rounded-lg border border-border">
       <table className="w-full border-collapse">
         <colgroup>
-          <col /><col style={{ width: '150px' }} /><col style={{ width: '160px' }} /><col style={{ width: '120px' }} /><col style={{ width: '180px' }} />
+          <col /><col style={{ width: '150px' }} /><col style={{ width: '150px' }} /><col style={{ width: '160px' }} /><col style={{ width: '120px' }} /><col style={{ width: '180px' }} />
         </colgroup>
         <thead>
           <tr>
-            {['Role', 'Target month', 'Status', 'Open for', ''].map((h, idx) => (
+            {['Role', 'Target month', 'Location', 'Status', 'Open for', ''].map((h, idx) => (
               <th
                 key={h || 'actions'}
                 className={cn(
                   'h-12 bg-primary-foreground text-sm font-medium text-muted-foreground whitespace-nowrap border-b border-border text-left',
                   idx === 0 ? 'pl-4 pr-3' : 'px-3',
-                  idx > 0 && idx < 4 && 'border-l border-border',
+                  idx > 0 && idx < 5 && 'border-l border-border',
                 )}
               >
                 {h}
@@ -54,11 +59,17 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
               </td>
               <td className={cell(1)}>{item.monthLabel}</td>
               <td className={cell(2)}>
+                <span className="flex items-center gap-1.5 text-sm text-foreground">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: LOC_TOKEN[item.loc] ?? 'var(--muted-foreground)' }} />
+                  {item.loc === 'Unassigned' ? 'Anywhere' : item.loc}
+                </span>
+              </td>
+              <td className={cell(3)}>
                 {item.kind === 'noreq'
                   ? <Badge variant="neutral">No request</Badge>
                   : <Badge variant="warning">Past due</Badge>}
               </td>
-              <td className={cn(cell(3), 'text-muted-foreground')}>{item.age}</td>
+              <td className={cn(cell(4), 'text-muted-foreground')}>{item.age}</td>
               <td className="h-12 px-3 pr-4 text-sm">
                 <div className="flex items-center justify-end gap-2">
                   {item.kind === 'noreq' && (

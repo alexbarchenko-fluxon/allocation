@@ -117,15 +117,14 @@ function PositionsPageInner() {
   }, [push, log])
 
   // Queue actions
+  // Review rows are location-grain — wizards open pre-scoped to the row's exact records.
   const reviewOpenReq = useCallback((it: ReviewItem) => {
-    const id = `${it.title}|${it.mk}`
-    const row = unifiedRows(cells, '', 'All', false).find((r) => r.id === id)
-    if (row) { setReqScope(null); setReqRow(row) }
+    const row = unifiedRows(cells, '', 'All', false).find((r) => r.id === it.rowId)
+    if (row) { setReqScope(it.recIds); setReqRow(row) }
   }, [cells])
   const reviewClose = useCallback((it: ReviewItem) => {
-    const id = `${it.title}|${it.mk}`
-    const row = unifiedRows(cells, '', 'All', false).find((r) => r.id === id)
-    if (row) { setCloseScope(null); setCloseRow(row) }
+    const row = unifiedRows(cells, '', 'All', false).find((r) => r.id === it.rowId)
+    if (row) { setCloseScope(it.recIds); setCloseRow(row) }
   }, [cells])
 
   // Panel per-group actions — open the matching wizard scoped to the chosen records.
