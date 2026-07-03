@@ -178,7 +178,7 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
             return (
               <React.Fragment key={section.key}>
                 <StageSeparatorRow label={section.label} count={section.rows.length} colSpan={count} open={isOpen} onToggle={() => toggle(section.key)} />
-                {isOpen && sortRows(section.rows).map((row, i, arr) => (
+                {isOpen && sortRows(section.rows).map((row) => (
                   <tr
                     key={row.id}
                     onClick={() => onRowClick(row)}
@@ -191,14 +191,10 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
                       const cls = cellCls(idx)
                       switch (c.id) {
                         case 'role':
-                          // Consecutive rows of the same role read as one role's timeline:
-                          // the name stays prominent on the first row and mutes on repeats.
                           return (
                             <td key={c.id} className={cn(cls, 'pl-4')}>
                               <div className="flex items-center gap-2">
-                                <span className={cn('font-medium', i > 0 && arr[i - 1].title === row.title ? 'text-muted-foreground' : 'text-foreground')}>
-                                  {row.title}
-                                </span>
+                                <span className="font-medium text-foreground">{row.title}</span>
                               </div>
                             </td>
                           )
