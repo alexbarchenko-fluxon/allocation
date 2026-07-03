@@ -196,7 +196,7 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
                           return (
                             <td key={c.id} className={cn(cls, 'pl-4')}>
                               <div className="flex items-center gap-2">
-                                <span className={cn('font-medium', i > 0 && arr[i - 1].title === row.title ? 'text-muted-foreground/60' : 'text-foreground')}>
+                                <span className={cn('font-medium', i > 0 && arr[i - 1].title === row.title ? 'text-muted-foreground' : 'text-foreground')}>
                                   {row.title}
                                 </span>
                               </div>
