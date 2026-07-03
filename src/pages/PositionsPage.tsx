@@ -9,7 +9,7 @@ import { FilterMultiSelect } from '@/components/ui/filter-multiselect'
 import { DEPTS } from '@/lib/positions/roles'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { makeSeedCells, SEED_ACTIVITY, type ActivityItem } from '@/lib/positions/seed'
-import { type Cells } from '@/lib/positions/model'
+import { type Cells, isPastDueMonth } from '@/lib/positions/model'
 import { TIMELINE, monthFull, CURRENT_KEY, TODAY } from '@/lib/positions/time'
 import { unifiedRows, groupByDept, recordsForRow, needsReviewItems, needsReviewCount, planGrid, rollup, earliestOpenIdx, deptRollup, roleRollup, seedNotes, type PosRow, type ReviewItem, type PosNote } from './positions/lib'
 import { PositionsTable } from './positions/PositionsTable'
@@ -159,7 +159,11 @@ function PositionsPageInner() {
   const [closeRow, setCloseRow] = useState<PosRow | null>(null)
   const [closeScope, setCloseScope] = useState<string[] | null>(null) // record ids to close, or null = all active
   const closeRecordsList = useMemo(() => (closeRow ? recordsForRow(cells, closeRow.id) : []), [cells, closeRow])
-  const closeActive = closeRecordsList.filter((r) => (r.status === 'open' || r.status === 'pending') && (!closeScope || closeScope.includes(r.id)))
+  // Month-aware normalisation, same as the panel: in a past month an open record
+  // with a request is past due — the wizard must label it that way too.
+  const closeActive = closeRecordsList
+    .filter((r) => (r.status === 'open' || r.status === 'pending') && (!closeScope || closeScope.includes(r.id)))
+    .map((r) => (closeRow && isPastDueMonth(closeRow.mk) && r.status === 'open' && !r.noReq ? { ...r, status: 'pending' as const } : r))
   const closeFilled = closeRecordsList.filter((r) => r.status === 'started' || r.status === 'accepted').length
   const onCloseConfirm = useCallback((ids: string[], reason: string) => {
     if (!closeRow) return

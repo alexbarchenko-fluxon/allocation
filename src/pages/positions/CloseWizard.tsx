@@ -40,6 +40,18 @@ export function CloseWizard({ open, onOpenChange, title, dept, monthLabel, recor
   const canContinue = n > 0
   const canConfirm = n > 0 && note.trim().length > 0
 
+  // Honest subtitle: break the records down by state instead of calling everything "open".
+  const breakdown = (() => {
+    const pending = records.filter((r) => r.status === 'pending').length
+    const noReq = records.filter((r) => r.status === 'open' && r.noReq).length
+    const openN = records.length - pending - noReq
+    const parts: string[] = []
+    if (pending > 0) parts.push(`${pending} past due`)
+    if (openN > 0) parts.push(`${openN} open`)
+    if (noReq > 0) parts.push(`${noReq} no request`)
+    return parts.join(' · ') || 'no active positions'
+  })()
+
   const confirm = () => {
     if (!canConfirm) return
     onConfirm(pickedIds, note.trim())
@@ -54,7 +66,7 @@ export function CloseWizard({ open, onOpenChange, title, dept, monthLabel, recor
           <div className="flex items-start justify-between gap-2">
             <div className="flex flex-col gap-1">
               <h2 className="text-xl font-semibold tracking-tight">Closing {title} positions</h2>
-              <p className="text-sm text-muted-foreground">{dept} · {monthLabel} · {records.length} open</p>
+              <p className="text-sm text-muted-foreground">{dept} · {monthLabel} · {breakdown}</p>
             </div>
           </div>
           {/* Step rail */}
@@ -80,7 +92,11 @@ export function CloseWizard({ open, onOpenChange, title, dept, monthLabel, recor
                     <Checkbox checked={!!picked[r.id]} onCheckedChange={(v) => setPicked((p) => ({ ...p, [r.id]: !!v }))} />
                     <span className="text-sm font-medium text-foreground">{r.loc}</span>
                   </div>
-                  {r.status === 'pending' ? <Badge variant="warning">Past due</Badge> : <Badge variant="blue">Open</Badge>}
+                  {r.status === 'pending'
+                    ? <Badge variant="warning">Past due</Badge>
+                    : r.noReq
+                    ? <Badge variant="neutral">No request</Badge>
+                    : <Badge variant="outline" className="border-transparent bg-electric-blue-50 text-foreground">Open</Badge>}
                 </label>
               ))}
               {filledCount > 0 && (
