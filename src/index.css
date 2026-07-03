@@ -52,8 +52,8 @@
 
     /* Location / country hues — kept OFF the status palette (no green/blue/amber/red)
        so geography never reads as a status. Purple / indigo / rose. */
-    --loc-india:         oklch(0.560 0.200 300);   /* violet  */
-    --loc-europe:        oklch(0.520 0.170 285);   /* indigo-violet, clear of open-blue */
+    --loc-india:         #894ed6;                  /* violet, per Figma */
+    --loc-europe:        #be185d;                  /* pink, per Figma */
     --loc-north-america: oklch(0.600 0.180 350);   /* rose    */
 
 
@@ -233,8 +233,8 @@
     --chart-5: oklch(0.645 0.215 16.439);
 
     /* Location / country hues — dark variants (a touch brighter for contrast) */
-    --loc-india:         oklch(0.680 0.190 300);
-    --loc-europe:        oklch(0.640 0.160 285);
+    --loc-india:         oklch(0.680 0.170 297);   /* #894ed6, lifted for dark */
+    --loc-europe:        oklch(0.650 0.200 4);     /* #be185d, lifted for dark */
     --loc-north-america: oklch(0.700 0.170 350);
 
     /* Dark mode sidebar */
