@@ -9,8 +9,14 @@ import { TODAY, CURRENT_KEY } from '@/lib/positions/time'
 import { type DetailRecord } from './lib'
 
 const LOC_DOT: Record<string, string> = { India: 'var(--loc-india)', Europe: 'var(--loc-europe)', 'North America': 'var(--loc-north-america)' }
-// Default target date = first day of the current hiring period (month), per PRD 2.3.
-const defaultTarget = () => new Date(CURRENT_KEY + '-01T00:00:00Z')
+// Default target date = end of the current hiring period. Talent groups requests
+// monthly ("end of specified month" — Brandon), and month start would already be past.
+const defaultTarget = () => {
+  const d = new Date(CURRENT_KEY + '-01T00:00:00Z')
+  d.setUTCMonth(d.getUTCMonth() + 1)
+  d.setUTCDate(0) // last day of the current month
+  return d
+}
 
 interface Props {
   open: boolean
