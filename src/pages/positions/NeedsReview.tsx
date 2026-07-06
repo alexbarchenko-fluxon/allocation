@@ -71,9 +71,12 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
                 </span>
               </td>
               <td className={cell(3)}>
-                {item.kind === 'noreq'
-                  ? <Badge variant="neutral">No request</Badge>
-                  : <Badge variant="warning">Past due</Badge>}
+                <span className="flex items-center gap-1.5">
+                  {item.kind === 'noreq'
+                    ? <Badge variant="neutral">No request</Badge>
+                    : <Badge variant="warning">Past due</Badge>}
+                  {item.reopened && <Badge variant="outline">Reopened</Badge>}
+                </span>
               </td>
               <td className={cn(cell(4), 'text-muted-foreground')}>{item.age}</td>
               <td className={cell(5)}>

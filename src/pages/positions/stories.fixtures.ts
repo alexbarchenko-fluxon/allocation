@@ -46,6 +46,8 @@ export function makeRow(title: string, mk: string): PosRow {
     people,
     locs,
     notes: noteCount(cellKey(title, mk)),
+    reopened: !!c.reopened,
+    reopenedFrom: c.reopenedFrom,
   }
 }
 
@@ -92,6 +94,10 @@ export const recordsFilled: DetailRecord[] = recordsForRow(cells, cellKey('Staff
 // Past due: an open position sitting in a month that already passed.
 export const rowPastDue = makeRow('Product Designer', '2026-05')
 export const recordsPastDue: DetailRecord[] = recordsForRow(cells, rowPastDue.id)
+
+// Reopened after someone left (Marta K. story from the seed).
+export const rowReopened = makeRow('Engineering Manager', '2026-06')
+export const recordsReopened: DetailRecord[] = recordsForRow(cells, rowReopened.id)
 
 // With closed history.
 export const rowClosed = makeRow('Software Engineer', '2026-04')

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { PositionDetailPanel } from './PositionDetailPanel'
 import {
+  rowReopened, recordsReopened,
   rowMixed, recordsMixed,
   rowFilled, recordsFilled,
   rowPastDue, recordsPastDue,
@@ -48,6 +49,11 @@ export const FullyFilled: Story = {
 /** A month that already passed — open records read as past due. */
 export const PastDue: Story = {
   args: { row: rowPastDue, records: recordsPastDue },
+}
+
+/** Reopened position — the provenance line explains who left and when. */
+export const Reopened: Story = {
+  args: { row: rowReopened, records: recordsReopened, notes: [] },
 }
 
 /** A role-month with closed history — the collapsible Closed section appears. */

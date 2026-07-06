@@ -50,6 +50,7 @@ function StatusBadges({ row }: { row: PosRow }) {
       {row.pending > 0 && <Badge variant="warning">{row.pending} past due</Badge>}
       {openWithReq > 0 && <Badge variant="outline" className="border-transparent bg-electric-blue-50 text-foreground">{openWithReq} open</Badge>}
       {row.noReq > 0 && <Badge variant="neutral">{row.noReq} no request</Badge>}
+      {row.reopened && <Badge variant="outline" title={row.reopenedFrom}>Reopened</Badge>}
       {row.filled > 0 && (row.open > 0 || row.pending > 0) && <Badge variant="success">{row.filled} filled</Badge>}
     </div>
   )

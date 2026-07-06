@@ -24,6 +24,8 @@ export interface PosRow {
   people: { name: string; loc: string }[];
   locs: { loc: string; n: number }[];   // location split across non-closed positions
   notes: number;                         // note count (mock until a real notes model exists)
+  reopened: boolean;                     // provenance: a placement ended and the position reopened
+  reopenedFrom?: string;                 // the human story ("Marta K. left the role on Jun 9")
 }
 
 // Notes on a role-month position row (mirrors the Deals notes pattern).
@@ -71,6 +73,8 @@ function rowFor(role: Role, mk: string, c: Cell): PosRow {
     people,
     locs,
     notes: noteCount(cellKey(role.title, mk)),
+    reopened: !!c.reopened,
+    reopenedFrom: c.reopenedFrom,
   };
 }
 
@@ -128,6 +132,7 @@ export interface ReviewItem {
   loc: string;
   kind: "noreq" | "pending"; n: number; days: number; age: string;
   recIds: string[];
+  reopened?: boolean;                    // cell-level provenance, shown on no-request rows
 }
 export function needsReviewItems(cells: Cells): ReviewItem[] {
   const out: ReviewItem[] = [];
@@ -150,6 +155,7 @@ export function needsReviewItems(cells: Cells): ReviewItem[] {
             loc, kind, n: list.length,
             days: daysOpen(c), age: openAgeLabel(c),
             recIds: list.map((r) => r.id),
+            reopened: kind === "noreq" && !!c.reopened,
           });
         }
       };
