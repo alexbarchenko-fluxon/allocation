@@ -16,11 +16,12 @@ const meta: Meta<typeof PlanToolbar> = {
   component: PlanToolbar,
   parameters: { layout: 'centered' },
   tags: ['autodocs'],
-  args: { winLen: WIN, dept: 'All' },
+  args: { winLen: WIN, dept: 'All', showAll: false },
   argTypes: {
     onShift: { action: 'shift' },
     onApply: { action: 'apply' },
     onDept: { action: 'dept' },
+    onShowAll: { action: 'show-all' },
   },
 }
 

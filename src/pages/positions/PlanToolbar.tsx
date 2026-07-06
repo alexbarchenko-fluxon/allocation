@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { TIMELINE } from '@/lib/positions/time'
 import { DEPTS } from '@/lib/positions/roles'
@@ -19,9 +20,11 @@ interface Props {
   canRight: boolean
   dept: string
   onDept: (v: string) => void
+  showAll: boolean
+  onShowAll: (v: boolean) => void
 }
 
-export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onApply, canLeft, canRight, dept, onDept }: Props) {
+export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onApply, canLeft, canRight, dept, onDept, showAll, onShowAll }: Props) {
   // The picker edits a pending selection; the grid only moves on Apply.
   const [open, setOpen] = useState(false)
   const [pStart, setPStart] = useState(startIdx)
@@ -107,6 +110,12 @@ export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onApply, ca
           {DEPTS.map((d) => <SelectItem key={d} value={d}>{d === 'All' ? 'All departments' : d}</SelectItem>)}
         </SelectContent>
       </Select>
+      {/* Off by default: the grid shows only roles with planned positions in the window.
+          On: every role appears with empty cells as creation shortcuts. */}
+      <label className="flex h-9 cursor-pointer select-none items-center gap-2 whitespace-nowrap text-sm text-muted-foreground hover:text-foreground">
+        <Checkbox checked={showAll} onCheckedChange={(v) => onShowAll(!!v)} />
+        All roles
+      </label>
     </div>
   )
 }

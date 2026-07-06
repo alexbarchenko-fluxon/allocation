@@ -179,7 +179,7 @@ export interface GridCell {
 }
 export interface GridRow { title: string; dept: string; cells: GridCell[] }
 
-export function planGrid(cells: Cells, months: string[], search: string, dept: string): { dept: string; rows: GridRow[] }[] {
+export function planGrid(cells: Cells, months: string[], search: string, dept: string, showAll = false): { dept: string; rows: GridRow[] }[] {
   const out: { dept: string; rows: GridRow[] }[] = [];
   for (const d of DEPT_ORDER) {
     if (dept !== "All" && d !== dept) continue;
@@ -188,8 +188,11 @@ export function planGrid(cells: Cells, months: string[], search: string, dept: s
     for (const role of BASE_ROLES.filter((r) => r.dept === d)) {
       if (search && !role.title.toLowerCase().includes(search.toLowerCase())) continue;
       // only roles that have any position in the window
-      const hasAny = months.some((mk) => { const c = cells[cellKey(role.title, mk)]; return c && cItems(c).length > 0; });
-      if (!hasAny) continue;
+      // Default view trims the grid to roles with ACTIVE positions in the window —
+      // the role list grows to all of Fluxon (incl. ops), so empty rows hide unless
+      // "All roles" is on (Kenny, Jul 6). Closed-only cells don't count as planned.
+      const hasAny = months.some((mk) => { const c = cells[cellKey(role.title, mk)]; return c && cItems(c).some((p) => p.status !== "closed"); });
+      if (!hasAny && !showAll) continue;
       const gcells: GridCell[] = months.map((mk) => {
         const c = cells[cellKey(role.title, mk)];
         const total = c ? cItems(c).filter((p) => p.status !== "closed").length : 0;

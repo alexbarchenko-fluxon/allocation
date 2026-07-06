@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MOCK_PEOPLE } from '@/mocks/people'
 import { Plus, History, Search } from 'lucide-react'
@@ -38,7 +38,13 @@ export default function PositionsPage() {
 function PositionsPageInner() {
   const navigate = useNavigate()
   const { push } = useToast()
+  // Prototype scope: MVP = what engineering builds now; Full adds future concepts
+  // (Notes, the Positions list view). Promised to Kenny so eng can read the boundary.
+  const [scope, setScope] = useState<'mvp' | 'full'>(() => (localStorage.getItem('allox-scope') === 'mvp' ? 'mvp' : 'full'))
+  useEffect(() => { localStorage.setItem('allox-scope', scope) }, [scope])
+  const isMvp = scope === 'mvp'
   const [tab, setTab] = useState('plan')
+  useEffect(() => { if (isMvp && tab === 'positions') setTab('plan') }, [isMvp, tab])
   const [posDept, setPosDept] = useState('All')
   const [posStatus, setPosStatus] = useState('all')
   const [search, setSearch] = useState('')
@@ -84,7 +90,8 @@ function PositionsPageInner() {
     setWIN(len)
     setStartIdx(Math.max(0, Math.min(TIMELINE.length - len, start)))
   }, [])
-  const planGroups = useMemo(() => planGrid(cells, planMonths, search, planDept), [cells, planMonths, search, planDept])
+  const [showAllRoles, setShowAllRoles] = useState(false)
+  const planGroups = useMemo(() => planGrid(cells, planMonths, search, planDept, showAllRoles), [cells, planMonths, search, planDept, showAllRoles])
   const planRollups = useMemo(() => planGroups.map((g) => ({
     dept: g.dept,
     ...deptRollup(cells, g.dept, planMonths),
@@ -243,7 +250,7 @@ function PositionsPageInner() {
                 <div className="flex items-center gap-3">
                   <TabsList>
                     <TabsTrigger value="plan" className="flex-none">Plan</TabsTrigger>
-                    <TabsTrigger value="positions" className="flex-none">Positions</TabsTrigger>
+                    {!isMvp && <TabsTrigger value="positions" className="flex-none">Positions</TabsTrigger>}
                     <TabsTrigger value="needs" className="flex-none gap-2">
                       Needs review
                       {reviewCount > 0 && (
@@ -270,6 +277,8 @@ function PositionsPageInner() {
                     canRight={startIdx + WIN < TIMELINE.length}
                     dept={planDept}
                     onDept={setPlanDept}
+                    showAll={showAllRoles}
+                    onShowAll={setShowAllRoles}
                   />
                 )}
                 {tab === 'positions' && (
@@ -333,6 +342,7 @@ function PositionsPageInner() {
         row={selectedRow}
         records={records}
         notes={selectedRow ? notesFor(selectedRow.id) : []}
+        showNotes={!isMvp}
         isOpen={!!selectedRow}
         onDismiss={() => { setSelectedRow(null); setSelected(null) }}
         onOpenRequest={panelOpenRequest}
@@ -349,6 +359,24 @@ function PositionsPageInner() {
       <ChangeLog entries={activity} isOpen={logOpen} onClose={() => setLogOpen(false)} />
 
       <CreateDialogList open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) setCreatePrefill(undefined) }} onCreate={onCreateList} defaultTitle={createPrefill} />
+
+      {/* Scope preview switch — lets reviewers flip between the engineering MVP
+          and the full design vision (adds Notes + the Positions list view). */}
+      <div
+        className="fixed bottom-4 right-4 z-50 flex items-center rounded-full border border-border bg-background p-0.5 shadow-sm"
+        title="Prototype scope — MVP: what engineering builds now. Full: includes future concepts (Notes, Positions list)."
+      >
+        {(['mvp', 'full'] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setScope(v)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${scope === v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            {v === 'mvp' ? 'MVP' : 'Full'}
+          </button>
+        ))}
+      </div>
 
       <CloseWizard
         open={!!closeRow}

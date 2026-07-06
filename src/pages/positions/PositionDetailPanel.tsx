@@ -205,6 +205,8 @@ interface Props {
   row: PosRow | null
   records: DetailRecord[]
   notes: PosNote[]
+  /** MVP scope hides Notes — placement is still an open design question. */
+  showNotes?: boolean
   isOpen: boolean
   onDismiss: () => void
   onOpenRequest: (recIds: string[]) => void   // no-request records → open-request wizard
@@ -214,7 +216,7 @@ interface Props {
   onPerson: (name: string) => void
 }
 
-export function PositionDetailPanel({ row, records, notes, isOpen, onDismiss, onOpenRequest, onCloseRecords, onNewPosition, onAddNote, onPerson }: Props) {
+export function PositionDetailPanel({ row, records, notes, showNotes = true, isOpen, onDismiss, onOpenRequest, onCloseRecords, onNewPosition, onAddNote, onPerson }: Props) {
   const monthPastDue = row ? isPastDueMonth(row.mk) : false
   // In a past month, open items (with a request) are past due — normalise so they land in the right section.
   const recs = records.map((r) => (monthPastDue && r.status === 'open' && !r.noReq ? { ...r, status: 'pending' as const } : r))
@@ -301,7 +303,7 @@ export function PositionDetailPanel({ row, records, notes, isOpen, onDismiss, on
             </Section>
           )}
 
-          <NotesSection notes={notes} onAddNote={onAddNote} />
+          {showNotes && <NotesSection notes={notes} onAddNote={onAddNote} />}
         </div>
 
         {/* Footer — bulk close + add more positions for this role */}

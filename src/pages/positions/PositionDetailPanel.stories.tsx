@@ -36,6 +36,11 @@ const meta: Meta<typeof PositionDetailPanel> = {
 export default meta
 type Story = StoryObj<typeof PositionDetailPanel>
 
+/** MVP scope — Notes hidden while its placement is an open design question. */
+export const MvpScopeNoNotes: Story = {
+  args: { row: rowMixed, records: recordsMixed, showNotes: false },
+}
+
 /** Someone on staff plus open positions — Filled and Open sections both populated. */
 export const MixedStatuses: Story = {
   args: { row: rowMixed, records: recordsMixed },
