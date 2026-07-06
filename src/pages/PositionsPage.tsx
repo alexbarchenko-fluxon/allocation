@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { MOCK_PEOPLE } from '@/mocks/people'
 import { Plus, History, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { FilterMultiSelect } from '@/components/ui/filter-multiselect'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -245,9 +244,11 @@ function PositionsPageInner() {
                   <TabsList>
                     <TabsTrigger value="plan" className="flex-none">Plan</TabsTrigger>
                     <TabsTrigger value="positions" className="flex-none">Positions</TabsTrigger>
-                    <TabsTrigger value="needs" className="flex-none">
+                    <TabsTrigger value="needs" className="flex-none gap-2">
                       Needs review
-                      {reviewCount > 0 && <Badge variant="warning" className="ml-2">{reviewCount}</Badge>}
+                      {reviewCount > 0 && (
+                        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-badge-warning px-1 text-xs font-medium text-badge-warning-fg tabular-nums">{reviewCount}</span>
+                      )}
                     </TabsTrigger>
                   </TabsList>
                   {(tab === 'plan' || tab === 'positions') && (

@@ -64,7 +64,6 @@ export function PlanGrid({ groups, rollups, months, search, onCellClick, onCreat
                   <span className={cn(past && 'text-badge-warning-fg', current && 'text-foreground', future && 'text-muted-foreground')}>{monthLabel(mk)} '{mk.slice(2, 4)}</span>
                   {past && <span className="text-[10px] uppercase tracking-wide text-badge-warning-fg/80">Past due</span>}
                   {current && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
-                  {future && months.indexOf(mk) === months.length - 1 && <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70 italic">Forecast</span>}
                 </div>
               )
             })}
@@ -83,10 +82,10 @@ export function PlanGrid({ groups, rollups, months, search, onCellClick, onCreat
                     <span className="flex items-center justify-center w-7 h-7 shrink-0">
                       <ChevronDown className={cn('h-4 w-4 text-foreground transition-transform', !isOpen && '-rotate-90')} />
                     </span>
-                    <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-foreground">{g.dept}</span>
+                    <span className="whitespace-nowrap text-xs font-semibold text-foreground">{g.dept}</span>
                     {ru && (
-                      <span className="ml-2 inline-flex items-center whitespace-nowrap rounded-full border border-border bg-background px-2 py-0.5 text-xs font-normal normal-case text-muted-foreground">
-                        <span className="font-medium text-foreground">{ru.filled}</span>&nbsp;filled&nbsp;·&nbsp;<span className="font-medium text-foreground">{ru.open}</span>&nbsp;open
+                      <span className="ml-2 whitespace-nowrap rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground">
+                        {`${ru.filled} filled · ${ru.open} open`}
                       </span>
                     )}
                   </button>
@@ -128,17 +127,17 @@ export function PlanGrid({ groups, rollups, months, search, onCellClick, onCreat
                                 'border-border bg-[rgba(231,235,255,0.5)] hover:bg-[rgba(231,235,255,0.85)]')}>
                               {(pastDue || pendingFlag) && (
                                 <Tooltip><TooltipTrigger asChild>
-                                  <span className="absolute -top-1 -right-1 flex items-center justify-center h-3.5 w-3.5 rounded-full bg-badge-warning-fg text-white ring-2 ring-background"><History className="h-2 w-2" /></span>
+                                  <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center h-[18px] w-[18px] rounded-full bg-badge-warning-fg text-white ring-2 ring-background"><History className="h-2.5 w-2.5" /></span>
                                 </TooltipTrigger><TooltipContent>{pastDue ? 'Past due: target month has passed' : 'Has a past-due request'}</TooltipContent></Tooltip>
                               )}
                               {needsFlag && (
                                 <Tooltip><TooltipTrigger asChild>
-                                  <span className="absolute -top-1 -right-1 flex items-center justify-center h-3.5 w-3.5 rounded-full bg-muted-foreground text-white ring-2 ring-background"><Flag className="h-2 w-2" /></span>
+                                  <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center h-[18px] w-[18px] rounded-full bg-muted-foreground text-white ring-2 ring-background"><Flag className="h-2.5 w-2.5" /></span>
                                 </TooltipTrigger><TooltipContent>No hiring request raised yet</TooltipContent></Tooltip>
                               )}
                               {reopened && (
                                 <Tooltip><TooltipTrigger asChild>
-                                  <span className="absolute -top-1 -right-1 flex items-center justify-center h-3.5 w-3.5 rounded-full bg-electric-blue-600 text-white ring-2 ring-background"><RotateCcw className="h-2 w-2" /></span>
+                                  <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center h-[18px] w-[18px] rounded-full bg-electric-blue-600 text-white ring-2 ring-background"><RotateCcw className="h-2.5 w-2.5" /></span>
                                 </TooltipTrigger><TooltipContent>Reopened after someone vacated the role</TooltipContent></Tooltip>
                               )}
                               <span className={cn('text-sm tabular-nums', pastDue ? 'text-badge-warning-fg' : 'text-foreground')}>
