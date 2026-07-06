@@ -72,10 +72,30 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
               </td>
               <td className={cell(3)}>
                 <span className="flex items-center gap-1.5">
-                  {item.kind === 'noreq'
-                    ? <Badge variant="neutral" className="whitespace-nowrap">No request</Badge>
-                    : <Badge variant="warning" className="whitespace-nowrap">Past due</Badge>}
-                  {item.reopened && <Badge variant="outline" className="whitespace-nowrap">Reopened</Badge>}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        {item.kind === 'noreq'
+                          ? <Badge variant="neutral" className="whitespace-nowrap">No request</Badge>
+                          : <Badge variant="warning" className="whitespace-nowrap">Past due</Badge>}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[260px]">
+                      {item.kind === 'noreq'
+                        ? 'No hiring request yet — nothing is being recruited until one is opened.'
+                        : 'Target month has passed. The request stays open — hiring is just delayed. Close it if no longer needed.'}
+                    </TooltipContent>
+                  </Tooltip>
+                  {item.reopened && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span><Badge variant="outline" className="whitespace-nowrap">Reopened</Badge></span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[260px]">
+                        {item.reopenedFrom ? `${item.reopenedFrom}.` : 'Reopened after the previous person left the role.'}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </span>
               </td>
               <td className={cn(cell(4), 'text-muted-foreground')}>{item.age}</td>

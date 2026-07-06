@@ -133,6 +133,7 @@ export interface ReviewItem {
   kind: "noreq" | "pending"; n: number; days: number; age: string;
   recIds: string[];
   reopened?: boolean;                    // cell-level provenance, shown on no-request rows
+  reopenedFrom?: string;                 // the human story behind the reopen
 }
 export function needsReviewItems(cells: Cells): ReviewItem[] {
   const out: ReviewItem[] = [];
@@ -156,6 +157,7 @@ export function needsReviewItems(cells: Cells): ReviewItem[] {
             days: daysOpen(c), age: openAgeLabel(c),
             recIds: list.map((r) => r.id),
             reopened: kind === "noreq" && !!c.reopened,
+            reopenedFrom: kind === "noreq" && c.reopened ? c.reopenedFrom : undefined,
           });
         }
       };

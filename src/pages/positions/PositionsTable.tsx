@@ -47,10 +47,25 @@ function StatusBadges({ row }: { row: PosRow }) {
   const openWithReq = Math.max(0, row.open - row.noReq)
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      {row.pending > 0 && <Badge variant="warning">{row.pending} past due</Badge>}
-      {openWithReq > 0 && <Badge variant="outline" className="border-transparent bg-electric-blue-50 text-foreground">{openWithReq} open</Badge>}
-      {row.noReq > 0 && <Badge variant="neutral">{row.noReq} no request</Badge>}
-      {row.reopened && <Badge variant="outline" title={row.reopenedFrom}>Reopened</Badge>}
+      {row.pending > 0 && (
+        <Tooltip>
+          <TooltipTrigger asChild><span><Badge variant="warning" className="whitespace-nowrap">{row.pending} past due</Badge></span></TooltipTrigger>
+          <TooltipContent className="max-w-[260px]">Target month has passed. The request stays open — hiring is just delayed. Close it if no longer needed.</TooltipContent>
+        </Tooltip>
+      )}
+      {openWithReq > 0 && <Badge variant="outline" className="whitespace-nowrap border-transparent bg-electric-blue-50 text-foreground">{openWithReq} open</Badge>}
+      {row.noReq > 0 && (
+        <Tooltip>
+          <TooltipTrigger asChild><span><Badge variant="neutral" className="whitespace-nowrap">{row.noReq} no request</Badge></span></TooltipTrigger>
+          <TooltipContent className="max-w-[260px]">No hiring request yet — nothing is being recruited until one is opened.</TooltipContent>
+        </Tooltip>
+      )}
+      {row.reopened && (
+        <Tooltip>
+          <TooltipTrigger asChild><span><Badge variant="outline" className="whitespace-nowrap">Reopened</Badge></span></TooltipTrigger>
+          <TooltipContent className="max-w-[260px]">{row.reopenedFrom ? `${row.reopenedFrom}.` : 'Reopened after the previous person left the role.'}</TooltipContent>
+        </Tooltip>
+      )}
       {row.filled > 0 && (row.open > 0 || row.pending > 0) && <Badge variant="success">{row.filled} filled</Badge>}
     </div>
   )
