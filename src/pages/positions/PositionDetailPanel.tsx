@@ -53,25 +53,31 @@ function CloseIconBtn({ onClick, label }: { onClick: () => void; label: string }
 }
 
 // Collapsible status section. Empty sections show a count of 0 and don't expand.
-function Section({ label, count, tone, defaultOpen, children }: {
-  label: string; count: number; tone: Tone; defaultOpen: boolean; children?: React.ReactNode
+function Section({ label, count, tone, defaultOpen, emptyText, children }: {
+  label: string; count: number; tone: Tone; defaultOpen: boolean; emptyText?: string; children?: React.ReactNode
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const empty = count === 0
   return (
     <div className="border-t border-border">
+      {/* Empty sections stay expandable — the chevron is the affordance, and opening
+          one answers "is there really nothing here?" instead of leaving a dead row. */}
       <button
         type="button"
-        onClick={() => !empty && setOpen((o) => !o)}
-        className={cn('flex w-full items-center justify-between px-5 py-4', empty && 'cursor-default')}
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between px-5 py-4"
       >
         <span className="flex items-center gap-1.5">
           <span className={cn('text-sm font-medium', empty ? 'text-muted-foreground' : 'text-foreground')}>{label}</span>
           <CountBadge n={count} tone={tone} />
         </span>
-        {!empty && <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', !open && '-rotate-90')} />}
+        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', !open && '-rotate-90')} />
       </button>
-      {open && !empty && <div className="px-5 pb-4">{children}</div>}
+      {open && (
+        <div className="px-5 pb-4">
+          {empty ? <p className="pb-2 text-sm text-muted-foreground">{emptyText ?? 'Nothing here yet.'}</p> : children}
+        </div>
+      )}
     </div>
   )
 }
@@ -160,7 +166,7 @@ function NotesSection({ notes, onAddNote }: { notes: PosNote[]; onAddNote: (text
     <div className="border-t border-border">
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between px-5 py-4">
         <span className="flex items-center gap-2">
-          <NotepadText className="h-4 w-4 text-muted-foreground" />
+          <NotepadText className="h-5 w-5 text-muted-foreground" />
           <span className="text-sm font-medium text-foreground">Notes</span>
           {notes.length > 0 && (
             <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-medium text-primary-foreground tabular-nums">{notes.length}</span>
@@ -249,11 +255,11 @@ export function PositionDetailPanel({ row, records, notes, isOpen, onDismiss, on
 
         {/* Sections (keyed by row so the accordion resets when a different position is opened) */}
         <div key={row?.id} className="scrollbar-minimal flex-1 overflow-y-auto">
-          <Section label="Filled" count={filled.length} tone="filled" defaultOpen={filled.length > 0}>
+          <Section label="Filled" count={filled.length} tone="filled" defaultOpen={filled.length > 0} emptyText="None filled yet.">
             {filled.map((r) => <FilledRow key={r.id} rec={r} onPerson={onPerson} />)}
           </Section>
 
-          <Section label="Open" count={openRecs.length} tone="open" defaultOpen={openRecs.length > 0}>
+          <Section label="Open" count={openRecs.length} tone="open" defaultOpen={openRecs.length > 0} emptyText="No open requests.">
             <p className="mb-1 text-xs leading-4 text-muted-foreground">Actively recruiting via Spark. Close a request if the role's no longer needed.</p>
             {openGroups.map((g) => (
               <LocRow key={g.loc} loc={g.loc} count={g.items.length} tone="open">

@@ -54,15 +54,19 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
           {items.map((item) => (
             <tr key={item.id} className="border-b border-border bg-background hover:bg-extended-hover transition-colors">
               <td className={cn(cell(0), 'pl-4 font-medium text-foreground')}>
-                <span className="inline-flex items-center gap-2">
-                  {item.n > 1 && <Badge variant="neutral" className="tabular-nums">{item.n}</Badge>}
-                  {item.title}
-                </span>
+                {/* Count moved into the Location pill — no duplicate badge here. */}
+                {item.title}
               </td>
               <td className={cell(1)}>{item.monthLabel}</td>
               <td className={cell(2)}>
-                <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: LOC_TOKEN[item.loc] ?? 'var(--muted-foreground)' }} />
+                {/* Same bordered location pill as the Positions table (Figma 286-27503). */}
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground">
+                  <span
+                    className="flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] font-medium leading-none text-white tabular-nums"
+                    style={{ background: LOC_TOKEN[item.loc] ?? 'var(--muted-foreground)' }}
+                  >
+                    {item.n}
+                  </span>
                   {item.loc === 'Unassigned' ? 'Anywhere' : item.loc}
                 </span>
               </td>

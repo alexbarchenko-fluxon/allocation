@@ -7,9 +7,11 @@ interface StageSeparatorRowProps {
   colSpan: number
   open: boolean
   onToggle: () => void
+  /** Optional custom badge rendered instead of the default "(count)". */
+  badge?: React.ReactNode
 }
 
-export function StageSeparatorRow({ label, count, colSpan, open, onToggle }: StageSeparatorRowProps) {
+export function StageSeparatorRow({ label, count, colSpan, open, onToggle, badge }: StageSeparatorRowProps) {
   return (
     <tr className={cn('bg-muted', !open && 'border-b border-border')}>
       <td colSpan={colSpan} className="p-0 h-9">
@@ -24,7 +26,7 @@ export function StageSeparatorRow({ label, count, colSpan, open, onToggle }: Sta
           </span>
           <span className="flex items-center gap-1 text-xs font-medium text-foreground">
             <span>{label}</span>
-            <span>({count})</span>
+            {badge ?? <span>({count})</span>}
           </span>
         </button>
       </td>

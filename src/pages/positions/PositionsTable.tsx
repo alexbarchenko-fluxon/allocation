@@ -57,12 +57,13 @@ function StatusBadges({ row }: { row: PosRow }) {
 
 function LocationCluster({ locs }: { locs: { loc: string; n: number }[] }) {
   if (locs.length === 0) return <span className="text-sm text-muted-foreground">—</span>
+  // Bordered pill per location: 12px count circle + name (Figma 286-27503).
   return (
-    <div className="flex items-center gap-2.5 flex-wrap">
+    <div className="flex items-center gap-1.5 flex-wrap">
       {locs.map((l) => (
-        <span key={l.loc} className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+        <span key={l.loc} className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground">
           <span
-            className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-medium leading-none text-white tabular-nums"
+            className="flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] font-medium leading-none text-white tabular-nums"
             style={{ background: LOC_TOKEN[l.loc] ?? 'var(--muted-foreground)' }}
           >
             {l.n}
@@ -178,7 +179,22 @@ export function PositionsTable({ sections, onRowClick, selectedId, onRowClose }:
             const isOpen = open[section.key] ?? true
             return (
               <React.Fragment key={section.key}>
-                <StageSeparatorRow label={section.label} count={section.rows.length} colSpan={count} open={isOpen} onToggle={() => toggle(section.key)} />
+                <StageSeparatorRow
+                  label={section.label}
+                  count={section.rows.length}
+                  colSpan={count}
+                  open={isOpen}
+                  onToggle={() => toggle(section.key)}
+                  badge={(() => {
+                    const f = section.rows.reduce((n, r) => n + r.filled, 0)
+                    const o = section.rows.reduce((n, r) => n + r.open + r.pending, 0)
+                    return (
+                      <span className="ml-1 whitespace-nowrap rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground">
+                        {`${f} filled · ${o} open`}
+                      </span>
+                    )
+                  })()}
+                />
                 {isOpen && sortRows(section.rows).map((row) => (
                   <tr
                     key={row.id}

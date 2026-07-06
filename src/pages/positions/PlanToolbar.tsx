@@ -63,21 +63,25 @@ export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onApply, ca
                   <div key={yr} className="flex items-start gap-4">
                     <span className="w-11 shrink-0 pt-2 text-sm font-medium text-muted-foreground">{yr}</span>
                     <div className="grid flex-1 grid-cols-6 gap-y-1.5">
-                      {yearMonths.map((m, idxInYear) => {
+                      {yearMonths.map((m) => {
                         const i = TIMELINE.findIndex((x) => x.key === m.key)
-                        const isEndpoint = i === pStart || i === pEnd
-                        const inWindow = i > pStart && i < pEnd
-                        const col = idxInYear % 6
-                        // In-window months read as one continuous band; endpoints are solid pills.
-                        const bandStart = col === 0 || i === pStart + 1
-                        const bandEnd = col === 5 || i === pEnd - 1
+                        const isStart = i === pStart
+                        const isEnd = i === pEnd
+                        const inBand = i >= pStart && i <= pEnd
+                        // One continuous accent band across the window; only the band's absolute
+                        // ends are rounded. Endpoints render as primary pills sitting ON the band
+                        // so the range reads as a single connected stretch (Figma 285-26965).
                         return (
                           <button key={m.key} onClick={() => setPStart(Math.min(i, TIMELINE.length - pLen))}
-                            className={cn('py-2 text-sm transition-colors',
-                              isEndpoint ? 'rounded-md bg-primary font-medium text-primary-foreground'
-                                : inWindow ? cn('bg-electric-blue-50 text-primary', bandStart && 'rounded-l-md', bandEnd && 'rounded-r-md')
-                                : 'rounded-md text-foreground hover:bg-extended-hover')}>
-                            {m.label}
+                            className={cn('flex h-9 items-center justify-center text-sm transition-colors',
+                              inBand ? 'bg-accent text-primary' : 'rounded-md text-foreground hover:bg-extended-hover',
+                              isStart && 'rounded-l-md',
+                              isEnd && 'rounded-r-md')}>
+                            {isStart || isEnd ? (
+                              <span className="flex h-full w-full items-center justify-center rounded-md bg-primary text-primary-foreground">{m.label}</span>
+                            ) : (
+                              m.label
+                            )}
                           </button>
                         )
                       })}
@@ -91,7 +95,7 @@ export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onApply, ca
               <span className="text-sm font-medium text-foreground">
                 {TIMELINE[pStart]?.full} <span className="mx-1 text-muted-foreground">→</span> {TIMELINE[pEnd]?.full}
               </span>
-              <Button size="sm" onClick={apply}>Apply</Button>
+              <Button onClick={apply}>Apply</Button>
             </div>
           </PopoverContent>
         </Popover>
