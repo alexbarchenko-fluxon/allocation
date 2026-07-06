@@ -3,7 +3,8 @@ import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { TIMELINE } from '@/lib/positions/time'
 import { DEPTS } from '@/lib/positions/roles'
@@ -41,7 +42,19 @@ export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onApply, ca
   }
 
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="flex items-center gap-3">
+      {/* Off by default: the grid shows only roles with planned positions in the
+          window. On: every role appears, empty cells become creation shortcuts. */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <label className="flex h-9 cursor-pointer select-none items-center gap-2 whitespace-nowrap text-sm text-muted-foreground hover:text-foreground">
+            <Switch checked={showAll} onCheckedChange={onShowAll} />
+            Show all roles
+          </label>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-[260px]">Also show roles with nothing planned in this window — their empty cells let you open positions.</TooltipContent>
+      </Tooltip>
       <div className="flex items-center h-9 rounded-md border border-input bg-background shadow-xs">
         <button className="px-2 h-full text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:pointer-events-none" disabled={!canLeft} onClick={() => onShift(-1)} aria-label="Earlier"><ChevronLeft className="h-4 w-4" /></button>
         <Popover open={open} onOpenChange={openChange}>
@@ -110,12 +123,7 @@ export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onApply, ca
           {DEPTS.map((d) => <SelectItem key={d} value={d}>{d === 'All' ? 'All departments' : d}</SelectItem>)}
         </SelectContent>
       </Select>
-      {/* Off by default: the grid shows only roles with planned positions in the window.
-          On: every role appears with empty cells as creation shortcuts. */}
-      <label className="flex h-9 cursor-pointer select-none items-center gap-2 whitespace-nowrap text-sm text-muted-foreground hover:text-foreground">
-        <Checkbox checked={showAll} onCheckedChange={(v) => onShowAll(!!v)} />
-        All roles
-      </label>
     </div>
+    </TooltipProvider>
   )
 }

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { FieldLabel } from '@/components/ui/field-label'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DatePicker } from '@/components/ui/date-picker'
+import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { BASE_ROLES, DEPT_ORDER, EXEC_DEPT, isExecTitle } from '@/lib/positions/roles'
 import { TODAY } from '@/lib/positions/time'
@@ -20,22 +21,6 @@ const LOC_OPTIONS: LineLoc[] = ['Anywhere', 'India', 'Europe', 'North America']
 const LOC_TOKEN: Record<string, string> = {
   India: 'var(--loc-india)', Europe: 'var(--loc-europe)', 'North America': 'var(--loc-north-america)',
   Anywhere: 'var(--muted-foreground)',
-}
-
-// Same inline switch as CreateDialog — the system has no Switch primitive.
-function Switch({ checked, onChange, id }: { checked: boolean; onChange: (v: boolean) => void; id?: string }) {
-  return (
-    <button
-      type="button" role="switch" aria-checked={checked} id={id}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-        checked ? 'bg-primary' : 'bg-input',
-      )}
-    >
-      <span className={cn('inline-block h-4 w-4 rounded-full bg-background shadow-sm transition-transform', checked ? 'translate-x-4' : 'translate-x-0.5')} />
-    </button>
-  )
 }
 
 interface Props {
@@ -141,7 +126,7 @@ export function CreateDialogList({ open, onOpenChange, onCreate, defaultTitle }:
                 <span className="text-sm font-medium text-foreground">Raise hiring requests</span>
                 <span className="text-xs text-muted-foreground">On for new hires. Turn off for internal moves like a promotion, no request or start date.</span>
               </div>
-              <Switch checked={raiseRequest} onChange={setRaiseRequest} />
+              <Switch checked={raiseRequest} onCheckedChange={setRaiseRequest} />
             </div>
             {raiseRequest && (
               <div className="flex flex-col gap-2.5 pt-1">
