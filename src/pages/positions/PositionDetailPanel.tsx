@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Trash2, ExternalLink, ChevronDown, Plus, NotepadText, RotateCcw } from 'lucide-react'
+import { X, Trash2, ExternalLink, ChevronDown, Plus, NotepadText } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -271,12 +271,6 @@ export function PositionDetailPanel({ row, records, notes, isOpen, onDismiss, on
           {/* Exception states hide at zero — when visible, they always mean something. */}
           {noReqRecs.length > 0 && (
             <Section label="No request" count={noReqRecs.length} tone="neutral" defaultOpen>
-              {row?.reopened && row.reopenedFrom && (
-                <p className="mb-1.5 flex items-start gap-1.5 text-xs leading-4 text-foreground">
-                  <RotateCcw className="mt-0.5 h-3 w-3 shrink-0 text-electric-blue-600" />
-                  <span><span className="font-medium">Reopened</span> — {row.reopenedFrom}.</span>
-                </p>
-              )}
               <p className="mb-1 text-xs leading-4 text-muted-foreground">No hiring request raised yet, so nothing is being recruited. Open a request to start, or close the position.</p>
               {noReqGroups.map((g) => (
                 <LocRow key={g.loc} loc={g.loc} count={g.items.length} tone="neutral">
@@ -284,6 +278,9 @@ export function PositionDetailPanel({ row, records, notes, isOpen, onDismiss, on
                   <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(g.items.map((i) => i.id))}>Open request</Button>
                 </LocRow>
               ))}
+              {row?.reopened && row.reopenedFrom && (
+                <p className="mt-2 text-xs leading-4 text-muted-foreground">Reopened — {row.reopenedFrom}.</p>
+              )}
             </Section>
           )}
 
