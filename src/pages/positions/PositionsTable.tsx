@@ -19,7 +19,7 @@ const COLUMNS = [
   { id: 'notes', label: 'Notes', center: false, sortable: false },
   { id: 'settings', label: 'Actions', center: false, sortable: false },
 ]
-const FIXED: Record<string, string> = { headcount: '120px', age: '120px', notes: '90px', settings: '90px' }
+const FIXED: Record<string, string> = { headcount: '120px', age: '120px', notes: '80px', settings: '76px' }
 
 // Location colours are dedicated tokens, deliberately off the status palette.
 const LOC_TOKEN: Record<string, string> = {
@@ -62,9 +62,9 @@ function LocationCluster({ locs }: { locs: { loc: string; n: number }[] }) {
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
       {locs.map((l) => (
-        <span key={l.loc} className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground">
+        <span key={l.loc} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground">
           <span
-            className="flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] font-medium leading-none text-white tabular-nums"
+            className="flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] font-medium leading-3 text-white tabular-nums"
             style={{ background: LOC_TOKEN[l.loc] ?? 'var(--muted-foreground)' }}
           >
             {l.n}

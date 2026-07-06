@@ -32,7 +32,7 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
     <div className="overflow-hidden rounded-lg border border-border">
       <table className="w-full border-collapse">
         <colgroup>
-          <col /><col style={{ width: '150px' }} /><col style={{ width: '150px' }} /><col style={{ width: '160px' }} /><col style={{ width: '120px' }} /><col style={{ width: '180px' }} />
+          <col /><col style={{ width: '140px' }} /><col style={{ width: '170px' }} /><col style={{ width: '200px' }} /><col style={{ width: '110px' }} /><col style={{ width: '90px' }} />
         </colgroup>
         <thead>
           <tr>
@@ -60,9 +60,9 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
               <td className={cell(1)}>{item.monthLabel}</td>
               <td className={cell(2)}>
                 {/* Same bordered location pill as the Positions table (Figma 286-27503). */}
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground">
+                <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground">
                   <span
-                    className="flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] font-medium leading-none text-white tabular-nums"
+                    className="flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] font-medium leading-3 text-white tabular-nums"
                     style={{ background: LOC_TOKEN[item.loc] ?? 'var(--muted-foreground)' }}
                   >
                     {item.n}
@@ -73,9 +73,9 @@ export function NeedsReview({ items, onOpenRequest, onClose }: Props) {
               <td className={cell(3)}>
                 <span className="flex items-center gap-1.5">
                   {item.kind === 'noreq'
-                    ? <Badge variant="neutral">No request</Badge>
-                    : <Badge variant="warning">Past due</Badge>}
-                  {item.reopened && <Badge variant="outline">Reopened</Badge>}
+                    ? <Badge variant="neutral" className="whitespace-nowrap">No request</Badge>
+                    : <Badge variant="warning" className="whitespace-nowrap">Past due</Badge>}
+                  {item.reopened && <Badge variant="outline" className="whitespace-nowrap">Reopened</Badge>}
                 </span>
               </td>
               <td className={cn(cell(4), 'text-muted-foreground')}>{item.age}</td>
