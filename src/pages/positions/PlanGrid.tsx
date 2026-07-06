@@ -14,12 +14,24 @@ const DOT: Record<string, string> = {
   noreq: 'var(--badge-neutral-fg)', // no hiring request yet — grey, nothing recruiting
 }
 
+// Solid dot = filled, hollow ring = not yet filled (open / past due / no request).
+// Shape carries the state so the mix stays readable under any color vision.
 function Dots({ dots, max = 7 }: { dots: { status: string }[]; max?: number }) {
   const shown = dots.slice(0, max)
   const extra = dots.length - shown.length
+  const solid = (st: string) => st === 'started' || st === 'accepted'
   return (
     <div className="flex items-center gap-1 justify-center mt-1.5">
-      {shown.map((d, i) => <span key={i} className="h-1.5 w-1.5 rounded-full" style={{ background: DOT[d.status] ?? 'var(--muted-foreground)' }} />)}
+      {shown.map((d, i) => {
+        const c = DOT[d.status] ?? 'var(--muted-foreground)'
+        return (
+          <span
+            key={i}
+            className="h-1.5 w-1.5 rounded-full box-border"
+            style={solid(d.status) ? { background: c } : { background: 'transparent', border: `1.5px solid ${c}` }}
+          />
+        )
+      })}
       {extra > 0 && <span className="text-[10px] text-muted-foreground leading-none ml-0.5">+{extra}</span>}
     </div>
   )

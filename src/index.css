@@ -47,6 +47,8 @@
     --electric-blue-25:  #F3F5FF;
     --electric-blue-50:  oklch(0.950 0.020 265);
     --electric-blue-100: oklch(0.920 0.035 265);
+    --electric-blue-300: #6E86FF;   /* Figma library electric blue/300 */
+    --electric-blue-400: #3E5DFF;   /* Figma library electric blue/400 */
     --electric-blue-600: oklch(0.400 0.22 265);
     --electric-blue-700: oklch(0.300 0.18 265);
 
@@ -84,6 +86,13 @@
     --badge-success-fg:     #15803d;
     /* metric legend: Figma node 205-25961 uses teal/700 for the Filled segment+dot */
     --metric-filled:        #0f766e;
+    /* Stacked-bar segments: same hue families, laddered by lightness so the bar
+       stays readable under color-vision deficiencies (teal-700 -> blue-300 ->
+       orange-500 -> gray-300). Bar-only — badge/text tokens stay untouched. */
+    --seg-filled:           var(--metric-filled);
+    --seg-open:             var(--electric-blue-300);
+    --seg-pastdue:          #f97316;   /* tailwind orange-500 */
+    --seg-noreq:            #d1d5db;   /* tailwind gray-300 */
     /* warning — orange/100 bg+stroke, orange/700 text */
     --badge-warning-bg:     #ffedd5;
     --badge-warning-stroke: #ffedd5;
@@ -205,6 +214,10 @@
     --badge-success-fg:     #ffffff;
     /* metric legend filled, dark: lighter teal for contrast */
     --metric-filled:        #2dd4bf;
+    --seg-filled:           var(--metric-filled);
+    --seg-open:             var(--electric-blue-300);
+    --seg-pastdue:          #fb923c;   /* orange-400, lifted for dark */
+    --seg-noreq:            #6b7280;   /* gray-500, visible on dark */
     /* warning — orange/600 */
     --badge-warning-bg:     #ea580c;
     --badge-warning-stroke: #ea580c;

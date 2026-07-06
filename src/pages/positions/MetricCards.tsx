@@ -2,7 +2,7 @@ import { Info, ArrowRight } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { type Rollup } from './lib'
 
-const SEG = { filled: 'var(--metric-filled)', open: 'var(--electric-blue-600)', pending: 'var(--badge-warning-fg)', noreq: 'var(--badge-neutral-fg)' }
+const SEG = { filled: 'var(--seg-filled)', open: 'var(--seg-open)', pending: 'var(--seg-pastdue)', noreq: 'var(--seg-noreq)' }
 
 function CardLabel({ children, tip }: { children: React.ReactNode; tip: string }) {
   return (
@@ -40,7 +40,7 @@ export function MetricCards({ r, onNeedsReview }: Props) {
         <div className="bg-card border border-border shadow-sm rounded-lg p-6 flex flex-col gap-4 min-w-[200px]">
           <CardLabel tip="All active positions across departments. Closed positions are excluded.">Total positions</CardLabel>
           <p className="text-3xl font-semibold leading-none">{r.total}</p>
-          <div className="flex h-2 w-full overflow-hidden rounded-full bg-muted mt-1">
+          <div className="flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-muted mt-1">
             {segs.map((s) => <span key={s.key} style={{ flex: s.value / barTotal, background: s.color }} />)}
           </div>
           <div className="flex items-center gap-3 flex-wrap">
