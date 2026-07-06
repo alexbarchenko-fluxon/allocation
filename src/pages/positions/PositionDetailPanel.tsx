@@ -22,7 +22,7 @@ const LOC_TOKEN: Record<string, string> = {
 type Tone = 'filled' | 'open' | 'pending' | 'neutral'
 const TONE_BG: Record<Tone, string> = {
   filled: 'var(--metric-filled)',
-  open: 'var(--electric-blue-600)',
+  open: 'var(--primary)',              // matches the Notes badge — one blue everywhere
   pending: 'var(--badge-warning-fg)',
   neutral: 'var(--muted-foreground)',
 }

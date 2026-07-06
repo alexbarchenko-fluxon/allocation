@@ -6,12 +6,15 @@ import { monthLabel, CURRENT_KEY } from '@/lib/positions/time'
 import { type GridRow } from './lib'
 import { SearchEmpty } from './EmptyState'
 
+// Same families as the metric-bar segments so "filled/open/past due/no request"
+// is one colour language everywhere. gray-400 (not 300) for the tiny rings — the
+// bar's gray-300 is too faint at 6px on tinted cells.
 const DOT: Record<string, string> = {
-  started: 'var(--badge-success-fg)',
-  accepted: 'var(--badge-success-fg)',
-  pending: 'var(--badge-warning-fg)',
-  open: 'var(--electric-blue-600)',
-  noreq: 'var(--badge-neutral-fg)', // no hiring request yet — grey, nothing recruiting
+  started: 'var(--seg-filled)',
+  accepted: 'var(--seg-filled)',
+  pending: 'var(--seg-pastdue)',
+  open: 'var(--seg-open)',
+  noreq: '#9ca3af',
 }
 
 // Solid dot = filled, hollow ring = not yet filled (open / past due / no request).
