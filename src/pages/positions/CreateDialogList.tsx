@@ -6,7 +6,6 @@ import { FieldLabel } from '@/components/ui/field-label'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Switch } from '@/components/ui/switch'
-import { cn } from '@/lib/utils'
 import { BASE_ROLES, DEPT_ORDER, EXEC_DEPT, isExecTitle } from '@/lib/positions/roles'
 import { TODAY } from '@/lib/positions/time'
 
@@ -55,19 +54,19 @@ export function CreateDialogList({ open, onOpenChange, onCreate, defaultTitle }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-[640px] max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>New positions</DialogTitle>
-          <DialogDescription>Set the position details, then choose whether to raise a hiring request now.</DialogDescription>
+          <DialogTitle className="text-2xl font-medium tracking-tight">New positions</DialogTitle>
+          <DialogDescription className="text-xs">Set the position details, then choose whether to raise a hiring request now.</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-3 py-2 overflow-y-auto scrollbar-minimal flex-1 min-h-0">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">Add positions</span>
-            <Button variant="secondary" size="sm" onClick={() => setLines((ls) => [...ls, newLine(ls[ls.length - 1]?.title)])}>Add position</Button>
+            <span className="text-xs font-medium leading-none text-foreground">Add positions</span>
+            <Button variant="secondary" size="sm" className="h-8 border border-border text-xs" onClick={() => setLines((ls) => [...ls, newLine(ls[ls.length - 1]?.title)])}>Add position</Button>
           </div>
           {lines.map((line, idx) => (
-            <div key={idx} className="flex items-center gap-2">
+            <div key={idx} className="flex w-full items-center gap-2 rounded-lg bg-muted p-1">
               <div className="flex-1 min-w-0">
                 <Select value={line.title} onValueChange={(v) => patch(idx, { title: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -86,7 +85,7 @@ export function CreateDialogList({ open, onOpenChange, onCreate, defaultTitle }:
                 </Select>
               </div>
               <Select value={line.loc} onValueChange={(v) => patch(idx, { loc: v as LineLoc })}>
-                <SelectTrigger className="w-[170px] shrink-0">
+                <SelectTrigger className="w-[150px] shrink-0 bg-background">
                   <span className="flex items-center gap-2 truncate">
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: LOC_TOKEN[line.loc] }} />
                     <SelectValue />
@@ -102,10 +101,10 @@ export function CreateDialogList({ open, onOpenChange, onCreate, defaultTitle }:
                   ))}
                 </SelectContent>
               </Select>
-              <div className="flex h-9 shrink-0 items-center rounded-md border border-input bg-background shadow-xs">
-                <button className="h-full px-2 text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:pointer-events-none" disabled={line.count <= 1} onClick={() => patch(idx, { count: line.count - 1 })} aria-label="Fewer"><Minus className="h-4 w-4" /></button>
-                <span className="w-8 text-center text-sm tabular-nums">{line.count}</span>
-                <button className="h-full px-2 text-muted-foreground hover:text-foreground" onClick={() => patch(idx, { count: line.count + 1 })} aria-label="More"><Plus className="h-4 w-4" /></button>
+              <div className="flex h-9 w-[120px] shrink-0 items-center justify-between rounded-md border border-input bg-background px-1.5 shadow-xs">
+                <button className="flex h-6 w-6 items-center justify-center rounded-[3px] text-muted-foreground transition-colors hover:bg-extended-hover hover:text-foreground disabled:opacity-40 disabled:pointer-events-none" disabled={line.count <= 1} onClick={() => patch(idx, { count: line.count - 1 })} aria-label="Fewer"><Minus className="h-4 w-4" /></button>
+                <span className="flex-1 text-center text-sm tabular-nums text-muted-foreground">{line.count}</span>
+                <button className="flex h-6 w-6 items-center justify-center rounded-[3px] text-muted-foreground transition-colors hover:bg-extended-hover hover:text-foreground" onClick={() => patch(idx, { count: line.count + 1 })} aria-label="More"><Plus className="h-4 w-4" /></button>
               </div>
               <button
                 type="button"
@@ -124,7 +123,7 @@ export function CreateDialogList({ open, onOpenChange, onCreate, defaultTitle }:
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-medium text-foreground">Raise hiring requests</span>
-                <span className="text-xs text-muted-foreground">On for new hires. Turn off for internal moves like a promotion, no request or start date.</span>
+                <span className="max-w-[361px] text-sm text-muted-foreground">On for new hires. Turn off for internal moves like a promotion, no request or start date.</span>
               </div>
               <Switch checked={raiseRequest} onCheckedChange={setRaiseRequest} />
             </div>
@@ -132,17 +131,18 @@ export function CreateDialogList({ open, onOpenChange, onCreate, defaultTitle }:
               <div className="flex flex-col gap-2.5 pt-1">
                 <FieldLabel hint="Every request in this batch carries this target start date. The positions count toward that month's plan.">Start date</FieldLabel>
                 <DatePicker value={date} onChange={setDate} minDate={minDate} placeholder="Pick a date" side="top" />
+                {/* Lives here because THIS is what gets sent to Spark (Kenny). */}
+                <span className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground" title="Approval happens offline for the MVP. Recruiters pick positions up in Spark.">
+                  <Zap className="h-3.5 w-3.5" /> Sent to Spark automatically
+                </span>
               </div>
             )}
           </div>
         </div>
 
-        <DialogFooter className="items-center sm:justify-between">
-          <span className={cn('hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground', !raiseRequest && 'invisible')} title="Approval happens offline for the MVP. Recruiters pick positions up in Spark.">
-            <Zap className="h-3.5 w-3.5" /> Sent to Spark automatically
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+        <DialogFooter className="items-center">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button disabled={!valid} onClick={submit}>{total > 0 ? `Open ${total} ${total === 1 ? 'position' : 'positions'}` : 'Open positions'}</Button>
           </div>
         </DialogFooter>

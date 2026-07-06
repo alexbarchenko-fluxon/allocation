@@ -91,6 +91,14 @@ export function CloseWizard({ open, onOpenChange, title, dept, monthLabel, recor
         <div className="px-6 py-5 max-h-[55vh] overflow-y-auto scrollbar-minimal">
           {step === 0 ? (
             <div className="flex flex-col gap-3">
+              {filledCount > 0 && (
+                <div className="flex items-start gap-2 rounded-lg border border-badge-warning-stroke bg-badge-warning/40 p-3.5">
+                  <ShieldCheck className="h-4 w-4 text-badge-warning-fg shrink-0 mt-0.5" />
+                  <p className="text-sm text-badge-warning-fg">
+                    {filledCount} filled {filledCount === 1 ? 'position isn’t' : 'positions aren’t'} listed here — a position with someone in it can’t be closed. Closing an open position also closes its Spark hiring request.
+                  </p>
+                </div>
+              )}
               {records.map((r) => (
                 <label key={r.id} className="flex items-center justify-between gap-3 rounded-lg border border-border p-4 cursor-pointer hover:bg-extended-hover transition-colors">
                   <div className="flex items-center gap-3">
@@ -104,14 +112,6 @@ export function CloseWizard({ open, onOpenChange, title, dept, monthLabel, recor
                     : <Badge variant="outline" className="border-transparent bg-electric-blue-50 text-foreground">Open</Badge>}
                 </label>
               ))}
-              {filledCount > 0 && (
-                <div className="flex items-start gap-2 rounded-lg border border-badge-warning-stroke bg-badge-warning/40 p-3.5">
-                  <ShieldCheck className="h-4 w-4 text-badge-warning-fg shrink-0 mt-0.5" />
-                  <p className="text-sm text-badge-warning-fg">
-                    {filledCount} filled {filledCount === 1 ? 'position isn’t' : 'positions aren’t'} listed here — a position with someone in it can’t be closed. Closing an open position also closes its Spark hiring request.
-                  </p>
-                </div>
-              )}
             </div>
           ) : (
             <div className="flex flex-col gap-4">
