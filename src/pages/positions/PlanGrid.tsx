@@ -132,8 +132,8 @@ export function PlanGrid({ groups, rollups, months, search, onCellClick, onCreat
                             <button onClick={() => onCellClick(row.title, cell.mk)}
                               className={cn('relative w-full h-[52px] rounded-lg border flex flex-col items-center justify-center transition-all hover:shadow-sm',
                                 pastDue ? 'border-badge-warning-stroke bg-badge-warning/60' :
-                                // Populated cells carry a light accent tint so activity pops against empty slots.
-                                'border-border bg-[rgba(231,235,255,0.5)] hover:bg-[rgba(231,235,255,0.85)]')}>
+                                // Plain white per Figma — solid border alone separates populated cells from dashed empties.
+                                'border-border bg-background hover:bg-extended-hover')}>
                               {(pastDue || pendingFlag) && (
                                 <Tooltip><TooltipTrigger asChild>
                                   <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center h-[18px] w-[18px] rounded-full bg-badge-warning-fg text-white ring-2 ring-background"><History className="h-2.5 w-2.5" /></span>
