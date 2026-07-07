@@ -31,7 +31,7 @@ function Switch({
         className,
       )}
     >
-      <span className={cn("inline-block h-4 w-4 rounded-full bg-background shadow-sm transition-transform", checked ? "translate-x-4" : "translate-x-0.5")} />
+      <span className={cn("inline-block h-4 w-4 rounded-full bg-background shadow-lg transition-transform", checked ? "translate-x-4" : "translate-x-1")} />
     </button>
   )
 }
