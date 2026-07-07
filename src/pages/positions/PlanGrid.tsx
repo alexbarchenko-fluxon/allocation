@@ -7,7 +7,7 @@ import { type GridRow } from './lib'
 import { SearchEmpty } from './EmptyState'
 
 // Same families as the metric-bar segments so "filled/open/past due/no request"
-// is one colour language everywhere. gray-400 (not 300) for the tiny rings — the
+// is one colour language everywhere. gray-400 (not 300) for the tiny dots — the
 // bar's gray-300 is too faint at 6px on tinted cells.
 const DOT: Record<string, string> = {
   started: 'var(--seg-filled)',
@@ -17,24 +17,18 @@ const DOT: Record<string, string> = {
   noreq: '#9ca3af',
 }
 
-// Solid dot = filled, hollow ring = not yet filled (open / past due / no request).
-// Shape carries the state so the mix stays readable under any color vision.
+// Solid dots, differentiated by the laddered status colours (teal / blue-300 /
+// orange-500 / gray-400). Lightness spacing keeps the mix readable under CVD and
+// in grayscale; the hollow-ring variant was tested and dropped for a calmer look
+// (comparison evidence in the a11y review set).
 function Dots({ dots, max = 7 }: { dots: { status: string }[]; max?: number }) {
   const shown = dots.slice(0, max)
   const extra = dots.length - shown.length
-  const solid = (st: string) => st === 'started' || st === 'accepted'
   return (
     <div className="flex items-center gap-1 justify-center mt-1.5">
-      {shown.map((d, i) => {
-        const c = DOT[d.status] ?? 'var(--muted-foreground)'
-        return (
-          <span
-            key={i}
-            className="h-1.5 w-1.5 rounded-full box-border"
-            style={solid(d.status) ? { background: c } : { background: 'transparent', border: `1.5px solid ${c}` }}
-          />
-        )
-      })}
+      {shown.map((d, i) => (
+        <span key={i} className="h-1.5 w-1.5 rounded-full" style={{ background: DOT[d.status] ?? 'var(--muted-foreground)' }} />
+      ))}
       {extra > 0 && <span className="text-[10px] text-muted-foreground leading-none ml-0.5">+{extra}</span>}
     </div>
   )
