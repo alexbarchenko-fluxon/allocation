@@ -246,9 +246,9 @@ function PositionsPageInner() {
             <MetricCards r={metrics} onNeedsReview={() => setTab('needs')} />
 
             <Tabs value={tab} onValueChange={setTab}>
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 mb-4">
-                <div className="flex items-center gap-3">
-                  <TabsList>
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <TabsList className="shrink-0">
                     <TabsTrigger value="plan" className="flex-none">Plan</TabsTrigger>
                     {!isMvp && <TabsTrigger value="positions" className="flex-none">Positions</TabsTrigger>}
                     <TabsTrigger value="needs" className="flex-none gap-2">
@@ -259,7 +259,7 @@ function PositionsPageInner() {
                     </TabsTrigger>
                   </TabsList>
                   {(tab === 'plan' || tab === 'positions') && (
-                    <div className="relative w-[220px]">
+                    <div className="relative min-w-[110px] max-w-[220px] flex-1">
                       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tab === 'plan' ? 'Search' : 'Search roles'} className="h-9 pl-8" />
                     </div>
