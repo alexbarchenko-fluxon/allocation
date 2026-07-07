@@ -246,7 +246,7 @@ function PositionsPageInner() {
             <MetricCards r={metrics} onNeedsReview={() => setTab('needs')} />
 
             <Tabs value={tab} onValueChange={setTab}>
-              <div className="flex items-center justify-between gap-4 mb-4">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 mb-4">
                 <div className="flex items-center gap-3">
                   <TabsList>
                     <TabsTrigger value="plan" className="flex-none">Plan</TabsTrigger>
@@ -363,7 +363,7 @@ function PositionsPageInner() {
       {/* Scope preview switch — lets reviewers flip between the engineering MVP
           and the full design vision (adds Notes + the Positions list view). */}
       <div
-        className="fixed bottom-4 right-4 z-50 flex items-center rounded-full border border-border bg-background p-0.5 shadow-sm"
+        className="fixed bottom-4 left-4 z-50 flex items-center rounded-full border border-border bg-background p-0.5 shadow-sm"
         title="Prototype scope — MVP: what engineering builds now. Full: includes future concepts (Notes, Positions list)."
       >
         {(['mvp', 'full'] as const).map((v) => (
