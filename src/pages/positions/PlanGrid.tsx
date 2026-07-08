@@ -63,7 +63,7 @@ export function PlanGrid({ groups, rollups, months, search, onCellClick, onCreat
         <div className="min-w-max">
           {/* Header */}
           <div className="flex bg-primary-foreground border-b border-border">
-            <div className="shrink-0 h-11 flex items-center pl-4 text-sm font-medium text-muted-foreground" style={{ width: ROLE_W }}>Job title</div>
+            <div className="shrink-0 h-11 flex items-center pl-4 text-sm font-medium text-muted-foreground" style={{ width: ROLE_W }}>Role</div>
             {months.map((mk) => {
               const past = mk < CURRENT_KEY
               const current = mk === CURRENT_KEY

@@ -8,7 +8,6 @@ import { FieldLabel } from '@/components/ui/field-label'
 import { TODAY, CURRENT_KEY } from '@/lib/positions/time'
 import { type DetailRecord } from './lib'
 
-const LOC_DOT: Record<string, string> = { India: 'var(--loc-india)', Europe: 'var(--loc-europe)', 'North America': 'var(--loc-north-america)' }
 // Default target date = end of the current hiring period. Talent groups requests
 // monthly ("end of specified month" — Brandon), and month start would already be past.
 const defaultTarget = () => {
@@ -66,7 +65,6 @@ export function OpenRequestWizard({ open, onOpenChange, title, dept, monthLabel,
             <label key={r.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-4 py-3 cursor-pointer hover:bg-extended-hover transition-colors">
               <span className="flex items-center gap-3 min-w-0">
                 <Checkbox checked={!!picked[r.id]} onCheckedChange={(v) => setPicked((p) => ({ ...p, [r.id]: !!v }))} />
-                <span className="h-2 w-2 rounded-full shrink-0" style={{ background: LOC_DOT[r.loc] || 'var(--muted-foreground)' }} />
                 <span className="text-sm font-medium text-foreground truncate">{r.loc}</span>
               </span>
               <Badge variant="neutral">No request</Badge>
