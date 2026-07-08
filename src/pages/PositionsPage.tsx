@@ -11,8 +11,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { makeSeedCells, SEED_ACTIVITY, type ActivityItem } from '@/lib/positions/seed'
 import { type Cells, isPastDueMonth } from '@/lib/positions/model'
 import { TIMELINE, monthFull, CURRENT_KEY, TODAY } from '@/lib/positions/time'
-import { unifiedRows, groupByDept, recordsForRow, needsReviewItems, needsReviewCount, planGrid, rollup, earliestOpenIdx, deptRollup, roleRollup, seedNotes, type PosRow, type ReviewItem, type PosNote } from './positions/lib'
+import { unifiedRows, groupByDept, recordsForRow, needsReviewItems, needsReviewCount, planGrid, rollup, earliestOpenIdx, deptRollup, roleRollup, seedNotes, individualRows, type PosRow, type ReviewItem, type PosNote, type IndividualRow } from './positions/lib'
 import { PositionsTable } from './positions/PositionsTable'
+import { PositionsTableIndividual } from './positions/PositionsTableIndividual'
 import { PositionDetailPanel } from './positions/PositionDetailPanel'
 import { NeedsReview } from './positions/NeedsReview'
 import { PlanGrid } from './positions/PlanGrid'
@@ -40,7 +41,11 @@ function PositionsPageInner() {
   const { push } = useToast()
   // Prototype scope: MVP = what engineering builds now; Full adds future concepts
   // (Notes, the Positions list view). Promised to Kenny so eng can read the boundary.
-  const [scope, setScope] = useState<'mvp' | 'full'>(() => (localStorage.getItem('allox-scope') === 'mvp' ? 'mvp' : 'full'))
+  // AJ = Full, but the Positions tab renders at individual grain (his thread proposal).
+  const [scope, setScope] = useState<'mvp' | 'full' | 'aj'>(() => {
+    const v = localStorage.getItem('allox-scope')
+    return v === 'mvp' || v === 'aj' ? v : 'full'
+  })
   useEffect(() => { localStorage.setItem('allox-scope', scope) }, [scope])
   const isMvp = scope === 'mvp'
   const [tab, setTab] = useState('plan')
@@ -131,6 +136,25 @@ function PositionsPageInner() {
     const row = unifiedRows(cells, '', 'All', false).find((r) => r.id === it.rowId)
     if (row) { setCloseScope(it.recIds); setCloseRow(row) }
   }, [cells])
+
+  // AJ scope: the Positions tab at individual grain — same filters, one row per record.
+  const indivRows = useMemo(
+    () => (scope === 'aj' ? individualRows(cells, search, posDept, posStatus) : []),
+    [scope, cells, search, posDept, posStatus],
+  )
+  const findRow = useCallback((rowId: string) => unifiedRows(cells, '', 'All', false).find((r) => r.id === rowId), [cells])
+  const indivRowClick = useCallback((r: IndividualRow) => {
+    const row = findRow(r.rowId)
+    if (row) onRowClick(row)
+  }, [findRow]) // eslint-disable-line react-hooks/exhaustive-deps
+  const indivClose = useCallback((r: IndividualRow) => {
+    const row = findRow(r.rowId)
+    if (row) { setCloseScope([r.id]); setCloseRow(row) }
+  }, [findRow])
+  const indivOpenReq = useCallback((r: IndividualRow) => {
+    const row = findRow(r.rowId)
+    if (row) { setReqScope([r.id]); setReqRow(row) }
+  }, [findRow])
 
   // Panel per-group actions — open the matching wizard scoped to the chosen records.
   const panelOpenRequest = useCallback((recIds: string[]) => {
@@ -325,7 +349,11 @@ function PositionsPageInner() {
               </TabsContent>
 
               <TabsContent value="positions">
-                {sectionsWithNotes.length === 0
+                {scope === 'aj' ? (
+                  indivRows.length === 0
+                    ? <SearchEmpty query={search} />
+                    : <PositionsTableIndividual rows={indivRows} onRowClick={indivRowClick} selectedRowId={selectedRow?.id} onClose={indivClose} onOpenRequest={indivOpenReq} />
+                ) : sectionsWithNotes.length === 0
                   ? <SearchEmpty query={search} />
                   : <PositionsTable sections={sectionsWithNotes} onRowClick={onRowClick} selectedId={selected} onRowClose={(r) => { setCloseScope(null); setCloseRow(r) }} />}
               </TabsContent>
@@ -360,20 +388,21 @@ function PositionsPageInner() {
 
       <CreateDialogList open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) setCreatePrefill(undefined) }} onCreate={onCreateList} defaultTitle={createPrefill} />
 
-      {/* Scope preview switch — lets reviewers flip between the engineering MVP
-          and the full design vision (adds Notes + the Positions list view). */}
+      {/* Scope preview switch — lets reviewers flip between the engineering MVP,
+          the full design vision (adds Notes + the Positions list view), and AJ's
+          individual-grain take on the Positions list. */}
       <div
         className="fixed bottom-4 left-4 z-50 flex items-center rounded-full border border-border bg-background p-0.5 shadow-sm"
-        title="Prototype scope — MVP: what engineering builds now. Full: includes future concepts (Notes, Positions list)."
+        title="Prototype scope — MVP: what engineering builds now. Full: includes future concepts (Notes, Positions list). AJ: Positions list at individual grain."
       >
-        {(['mvp', 'full'] as const).map((v) => (
+        {(['mvp', 'full', 'aj'] as const).map((v) => (
           <button
             key={v}
             type="button"
             onClick={() => setScope(v)}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${scope === v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            {v === 'mvp' ? 'MVP' : 'Full'}
+            {v === 'mvp' ? 'MVP' : v === 'full' ? 'Full' : 'AJ'}
           </button>
         ))}
       </div>

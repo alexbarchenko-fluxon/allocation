@@ -254,6 +254,59 @@ export function unifiedRows(cells: Cells, search: string, dept: string, onlyOpen
   return out;
 }
 
+// AJ's proposal (third scope pill): the Positions list at individual grain —
+// one row per position record instead of role-month aggregates. Age and person
+// are per record, which is what makes the "Open for" / "Person" columns well-defined.
+export type IndividualStatus = "started" | "accepted" | "open" | "pastdue" | "noreq";
+export interface IndividualRow {
+  id: string;             // record id
+  rowId: string;          // title|mk — parent cell, scopes the panel and wizards
+  title: string; dept: string; mk: string; monthLabel: string;
+  status: IndividualStatus;
+  loc: string;
+  person?: { name: string; loc: string; start: string; stage: string };
+  age: string; ageDays: number;
+  reopened: boolean; reopenedFrom?: string;
+}
+const INDIV_FILTER: Record<string, IndividualStatus[]> = {
+  filled: ["started", "accepted"],
+  open: ["open"],
+  pending: ["pastdue"],
+  noreq: ["noreq"],
+};
+export function individualRows(cells: Cells, search: string, dept: string, status: string): IndividualRow[] {
+  const out: IndividualRow[] = [];
+  for (const role of BASE_ROLES) {
+    if (dept !== "All" && role.dept !== dept) continue;
+    if (search && !role.title.toLowerCase().includes(search.toLowerCase())) continue;
+    for (const m of TIMELINE) {
+      const c = cells[cellKey(role.title, m.key)];
+      if (!c) continue;
+      for (const p of cItems(c)) {
+        if (p.status === "closed") continue;
+        const effective: IndividualStatus =
+          (p.status === "open" || p.status === "pending") && p.noReq ? "noreq" :
+          p.status === "pending" || (p.status === "open" && isPastDueMonth(m.key)) ? "pastdue" :
+          (p.status as IndividualStatus);
+        if (status !== "all" && !INDIV_FILTER[status]?.includes(effective)) continue;
+        out.push({
+          id: p.id,
+          rowId: cellKey(role.title, m.key),
+          title: role.title, dept: role.dept, mk: m.key, monthLabel: monthFull(m.key),
+          status: effective,
+          loc: p.loc,
+          person: p.person,
+          age: effective === "started" || effective === "accepted" ? "—" : openAgeLabel(c),
+          ageDays: daysOpen(c),
+          reopened: effective === "noreq" && !!c.reopened,
+          reopenedFrom: effective === "noreq" && c.reopened ? c.reopenedFrom : undefined,
+        });
+      }
+    }
+  }
+  return out;
+}
+
 // Earliest month index that still has an open/past-due request, for the default window.
 export function earliestOpenIdx(cells: Cells): number {
   for (let i = 0; i < TIMELINE.length; i++) {
