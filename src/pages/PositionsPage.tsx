@@ -371,6 +371,7 @@ function PositionsPageInner() {
         records={records}
         notes={selectedRow ? notesFor(selectedRow.id) : []}
         showNotes={!isMvp}
+        individual={scope === 'aj'}
         isOpen={!!selectedRow}
         onDismiss={() => { setSelectedRow(null); setSelected(null) }}
         onOpenRequest={panelOpenRequest}

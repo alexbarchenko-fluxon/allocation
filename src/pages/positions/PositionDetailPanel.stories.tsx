@@ -65,3 +65,8 @@ export const Reopened: Story = {
 export const WithClosedRecords: Story = {
   args: { row: rowClosed, records: recordsClosed },
 }
+
+/** AJ scope (third pill): records listed one by one instead of grouped by location — each row carries its own actions. */
+export const IndividualRecords: Story = {
+  args: { row: rowMixed, records: recordsMixed, individual: true },
+}

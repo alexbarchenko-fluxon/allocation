@@ -214,9 +214,11 @@ interface Props {
   onNewPosition: () => void                   // footer → create dialog, role prefilled
   onAddNote: (text: string) => void
   onPerson: (name: string) => void
+  /** AJ scope: list records one by one instead of grouping by location. */
+  individual?: boolean
 }
 
-export function PositionDetailPanel({ row, records, notes, showNotes = true, isOpen, onDismiss, onOpenRequest, onCloseRecords, onNewPosition, onAddNote, onPerson }: Props) {
+export function PositionDetailPanel({ row, records, notes, showNotes = true, isOpen, onDismiss, onOpenRequest, onCloseRecords, onNewPosition, onAddNote, onPerson, individual = false }: Props) {
   const monthPastDue = row ? isPastDueMonth(row.mk) : false
   // In a past month, open items (with a request) are past due — normalise so they land in the right section.
   const recs = records.map((r) => (monthPastDue && r.status === 'open' && !r.noReq ? { ...r, status: 'pending' as const } : r))
@@ -230,9 +232,11 @@ export function PositionDetailPanel({ row, records, notes, showNotes = true, isO
   const closed = recs.filter((r) => r.status === 'closed')
 
   const groupByLoc = (list: DetailRecord[]) => {
+    // AJ scope: no aggregation — one row per record, each with its own actions.
+    if (individual) return list.map((r) => ({ key: r.id, loc: r.loc, items: [r] }))
     const m = new Map<string, DetailRecord[]>()
     for (const r of list) { if (!m.has(r.loc)) m.set(r.loc, []); m.get(r.loc)!.push(r) }
-    return [...m.entries()].map(([loc, items]) => ({ loc, items }))
+    return [...m.entries()].map(([loc, items]) => ({ key: loc, loc, items }))
   }
   const openGroups = groupByLoc(openRecs)
   const noReqGroups = groupByLoc(noReqRecs)
@@ -264,7 +268,7 @@ export function PositionDetailPanel({ row, records, notes, showNotes = true, isO
           <Section label="Open" count={openRecs.length} tone="open" defaultOpen={openRecs.length > 0} emptyText="No open requests.">
             <p className="mb-1 text-xs leading-4 text-muted-foreground">Actively recruiting via Spark. Close a request if the role's no longer needed.</p>
             {openGroups.map((g) => (
-              <LocRow key={g.loc} loc={g.loc} count={g.items.length} tone="open">
+              <LocRow key={g.key} loc={g.loc} count={g.items.length} tone="open">
                 <CloseIconBtn onClick={() => onCloseRecords(g.items.map((i) => i.id))} label={`Close ${g.loc} ${row?.title ?? ''}`} />
               </LocRow>
             ))}
@@ -275,7 +279,7 @@ export function PositionDetailPanel({ row, records, notes, showNotes = true, isO
             <Section label="No request" count={noReqRecs.length} tone="neutral" defaultOpen>
               <p className="mb-1 text-xs leading-4 text-muted-foreground">No hiring request raised yet, so nothing is being recruited. Open a request to start, or close the position.</p>
               {noReqGroups.map((g) => (
-                <LocRow key={g.loc} loc={g.loc} count={g.items.length} tone="neutral">
+                <LocRow key={g.key} loc={g.loc} count={g.items.length} tone="neutral">
                   <CloseIconBtn onClick={() => onCloseRecords(g.items.map((i) => i.id))} label={`Close ${g.loc} ${row?.title ?? ''}`} />
                   <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenRequest(g.items.map((i) => i.id))}>Open request</Button>
                 </LocRow>
@@ -290,7 +294,7 @@ export function PositionDetailPanel({ row, records, notes, showNotes = true, isO
             <Section label="Past due" count={pastDue.length} tone="pending" defaultOpen>
               <p className="mb-1 text-xs leading-4 text-muted-foreground">Target start date has passed. The request stays open — hiring is just delayed. Close it if we're no longer hiring.</p>
               {pastDueGroups.map((g) => (
-                <LocRow key={g.loc} loc={g.loc} count={g.items.length} tone="pending">
+                <LocRow key={g.key} loc={g.loc} count={g.items.length} tone="pending">
                   <CloseIconBtn onClick={() => onCloseRecords(g.items.map((i) => i.id))} label={`Close ${g.loc} ${row?.title ?? ''}`} />
                 </LocRow>
               ))}
