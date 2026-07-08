@@ -14,7 +14,15 @@ const label = (startIdx: number) => {
 const meta: Meta<typeof PlanToolbar> = {
   title: 'Positions/PlanToolbar',
   component: PlanToolbar,
-  parameters: { layout: 'centered' },
+  parameters: {
+    layout: 'centered',
+    docs: {
+      description: {
+        component:
+          'Range picker works like a date-range picker: first click sets the start month, second click sets the end (same month twice = single month; clicking before the start restarts). Hover previews the band while the end is pending, and Apply stays disabled until the range is complete. The 3/6/12 pills are length presets from the current start, capped at 12 months.',
+      },
+    },
+  },
   tags: ['autodocs'],
   args: { winLen: WIN, dept: 'All', showAll: false },
   argTypes: {

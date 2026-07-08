@@ -27,14 +27,30 @@ interface Props {
 
 export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onApply, canLeft, canRight, dept, onDept, showAll, onShowAll }: Props) {
   // The picker edits a pending selection; the grid only moves on Apply.
+  // Months work like a date-range picker: first click starts the range, second
+  // click ends it (same month twice = single month). Clicking before the start
+  // restarts. Pills are just length presets from the current start. Max 12 months
+  // — beyond that the grid cells stop being readable.
+  const MAX_LEN = 12
   const [open, setOpen] = useState(false)
   const [pStart, setPStart] = useState(startIdx)
   const [pLen, setPLen] = useState(winLen)
+  const [selecting, setSelecting] = useState(false) // waiting for the end month
+  const [hover, setHover] = useState<number | null>(null)
   const pEnd = Math.min(pStart + pLen - 1, TIMELINE.length - 1)
+  // While picking the end, preview the band up to the hovered month (forward only).
+  const bandEnd = selecting && hover != null && hover > pStart ? Math.min(hover, pStart + MAX_LEN - 1) : selecting ? pStart : pEnd
 
   const openChange = (o: boolean) => {
     setOpen(o)
-    if (o) { setPStart(startIdx); setPLen(winLen) }
+    if (o) { setPStart(startIdx); setPLen(winLen); setSelecting(false); setHover(null) }
+  }
+  const pickMonth = (i: number) => {
+    if (!selecting || i < pStart) {
+      setPStart(i); setPLen(1); setSelecting(true)
+    } else {
+      setPLen(Math.min(i - pStart + 1, MAX_LEN)); setSelecting(false)
+    }
   }
   const apply = () => {
     onApply(pStart, pLen)
@@ -64,15 +80,15 @@ export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onApply, ca
           <PopoverContent className="w-[460px] p-5" align="center" sideOffset={6}>
             <div className="flex gap-2">
               {[3, 6, 12].map((len) => (
-                <button key={len} onClick={() => { setPLen(len); setPStart((s) => Math.min(s, TIMELINE.length - len)) }}
+                <button key={len} onClick={() => { setPLen(len); setPStart((s) => Math.min(s, TIMELINE.length - len)); setSelecting(false) }}
                   className={cn('flex-1 rounded-full border px-3 py-2 text-sm transition-colors',
-                    pLen === len ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-foreground hover:bg-extended-hover')}>
+                    pLen === len && !selecting ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-foreground hover:bg-extended-hover')}>
                   {len} months
                 </button>
               ))}
             </div>
             <div className="border-t border-border -mx-5 my-4" />
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3" onMouseLeave={() => setHover(null)}>
               {YEARS.map((yr) => {
                 const yearMonths = TIMELINE.filter((m) => m.key.slice(0, 4) === yr)
                 return (
@@ -82,17 +98,18 @@ export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onApply, ca
                       {yearMonths.map((m) => {
                         const i = TIMELINE.findIndex((x) => x.key === m.key)
                         const isStart = i === pStart
-                        const isEnd = i === pEnd
-                        const inBand = i >= pStart && i <= pEnd
+                        const isEnd = i === bandEnd && !selecting
+                        const inBand = i >= pStart && i <= bandEnd
                         // One continuous accent band across the window; only the band's absolute
                         // ends are rounded. Endpoints render as primary pills sitting ON the band
                         // so the range reads as a single connected stretch (Figma 285-26965).
+                        // While an end month is pending, the band follows the hover as a preview.
                         return (
-                          <button key={m.key} onClick={() => setPStart(Math.min(i, TIMELINE.length - pLen))}
+                          <button key={m.key} onClick={() => pickMonth(i)} onMouseEnter={() => setHover(i)}
                             className={cn('flex h-9 items-center justify-center text-sm transition-colors',
                               inBand ? 'bg-accent text-primary' : 'rounded-md text-foreground hover:bg-extended-hover',
                               isStart && 'rounded-l-md',
-                              isEnd && 'rounded-r-md')}>
+                              (isEnd || (isStart && bandEnd === pStart)) && 'rounded-r-md')}>
                             {isStart || isEnd ? (
                               <span className="flex h-full w-full items-center justify-center rounded-md bg-primary text-primary-foreground">{m.label}</span>
                             ) : (
@@ -109,9 +126,10 @@ export function PlanToolbar({ rangeLabel, startIdx, winLen, onShift, onApply, ca
             <div className="border-t border-border -mx-5 mt-4" />
             <div className="flex items-center justify-between pt-4">
               <span className="text-sm font-medium text-foreground">
-                {TIMELINE[pStart]?.full} <span className="mx-1 text-muted-foreground">→</span> {TIMELINE[pEnd]?.full}
+                {TIMELINE[pStart]?.full} <span className="mx-1 text-muted-foreground">→</span>{' '}
+                {selecting ? <span className="font-normal text-muted-foreground">pick the end month</span> : TIMELINE[pEnd]?.full}
               </span>
-              <Button onClick={apply}>Apply</Button>
+              <Button onClick={apply} disabled={selecting}>Apply</Button>
             </div>
           </PopoverContent>
         </Popover>
