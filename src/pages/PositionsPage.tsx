@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MOCK_PEOPLE } from '@/mocks/people'
 import { Plus, History, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -115,6 +115,26 @@ function PositionsPageInner() {
     setSelectedRow((cur) => (cur && cur.id === row.id ? null : row))
     setSelected((s) => (s === row.id ? null : row.id))
   }
+
+  // Deep links for review & handoff — the /states index points here.
+  // /positions?scope=mvp|full|aj & tab=plan|positions|needs & cell=Title|YYYY-MM & all=1 & create=1 & log=1
+  // Read once on mount so a shared link lands on the exact screen and state.
+  const [searchParams] = useSearchParams()
+  useEffect(() => {
+    const sc = searchParams.get('scope')
+    if (sc === 'mvp' || sc === 'full' || sc === 'aj') setScope(sc)
+    const t = searchParams.get('tab')
+    if (t === 'plan' || t === 'positions' || t === 'needs') setTab(t)
+    if (searchParams.get('all') === '1') setShowAllRoles(true)
+    const cellId = searchParams.get('cell')
+    if (cellId) {
+      const row = unifiedRows(cells, '', 'All', false).find((r) => r.id === cellId)
+      if (row) { setSelectedRow(row); setSelected(row.id) }
+    }
+    if (searchParams.get('create') === '1') setCreateOpen(true)
+    if (searchParams.get('log') === '1') setLogOpen(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Undo-aware mutation runner: snapshot cells, apply, toast with undo.
   const run = useCallback((mutate: (cs: Cells) => Cells, logMsg: string, toast: { title: string; desc: string }) => {

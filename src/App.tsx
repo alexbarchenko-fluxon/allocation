@@ -8,6 +8,7 @@ import ProfilePage from '@/pages/people/ProfilePage'
 import AccountsPage from '@/pages/AccountsPage'
 import StatsPage from '@/pages/StatsPage'
 import DemoPage from '@/pages/DemoPage'
+import StatesIndexPage from '@/pages/StatesIndexPage'
 import { RoleProvider } from '@/roles/role-context'
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
             <Route path="/accounts" element={<AccountsPage />} />
             <Route path="/stats" element={<StatsPage />} />
             <Route path="/demo" element={<DemoPage />} />
+            <Route path="/states" element={<StatesIndexPage />} />
           </Routes>
         </div>
       </div>
