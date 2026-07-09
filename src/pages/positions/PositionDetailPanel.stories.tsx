@@ -38,7 +38,7 @@ type Story = StoryObj<typeof PositionDetailPanel>
 
 /** MVP scope — Notes hidden while its placement is an open design question. */
 export const MvpScopeNoNotes: Story = {
-  args: { row: rowMixed, records: recordsMixed, showNotes: false },
+  args: { row: rowMixed, records: recordsMixed, showNotes: false, individual: true },
 }
 
 /** Someone on staff plus open positions — Filled and Open sections both populated. */

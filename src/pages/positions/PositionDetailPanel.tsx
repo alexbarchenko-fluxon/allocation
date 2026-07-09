@@ -124,10 +124,12 @@ function FilledRow({ rec, onPerson }: { rec: DetailRecord; onPerson: (name: stri
   )
 }
 
-// AJ scope (meeting Jul 9): one flat list — no status or country grouping. Every
-// record is a row with its status badge; filled rows show the person AND the
-// position's requirement (Kenny: "is Madelyn filling an India seat or just from
-// India?"), open rows show the requirement with per-record actions.
+// Flat list (meeting Jul 9, now the MVP + AJ default): no status or country
+// grouping. Every record is a row with its status badge, filled (on staff /
+// offer accepted) rows first; filled rows show the person AND the position's
+// requirement (Kenny: "is Madelyn filling an India seat or just from India?"),
+// open rows show the requirement with per-record actions. The grouped variant
+// remains on Full scope for the Brandon A/B.
 function FlatRow({ rec, monthPastDue, onPerson, onClose, onOpenRequest }: {
   rec: DetailRecord
   monthPastDue: boolean
@@ -320,7 +322,7 @@ export function PositionDetailPanel({ row, records, notes, showNotes = true, isO
                 <span className="text-sm font-medium text-foreground">Positions</span>
                 <CountBadge n={filled.length + openRecs.length + noReqRecs.length + pastDue.length} tone="open" />
               </div>
-              {[...pastDue, ...noReqRecs, ...openRecs, ...filled].map((r) => (
+              {[...filled, ...pastDue, ...noReqRecs, ...openRecs].map((r) => (
                 <FlatRow
                   key={r.id}
                   rec={r}
