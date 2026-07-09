@@ -36,6 +36,7 @@ export function CommentOverlay() {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [text, setText] = useState('')
   const [name, setName] = useState(getAuthor())
+  const [copied, setCopied] = useState(false)
   const [tick, setTick] = useState(0)              // pin reposition heartbeat
   const highlight = useRef<string | null>(null)
 
@@ -186,13 +187,41 @@ export function CommentOverlay() {
             <span className="text-sm font-semibold">Comments · {BUILD_ID}</span>
             <button onClick={() => setPanel(false)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
           </div>
-          <div className="flex gap-1 border-b border-border px-3 py-2">
+          <div className="flex items-center gap-1 border-b border-border px-3 py-2">
             {(['open', 'resolved', 'all'] as const).map((f) => (
               <button key={f} onClick={() => setFilter(f)}
                 className={cn('rounded-full px-3 py-1 text-xs font-medium capitalize', filter === f ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}>
                 {f}
               </button>
             ))}
+            {/* Until a shared backend is configured, Export/Import is how comments travel between people. */}
+            <span className="ml-auto flex gap-2">
+              <button
+                title="Copy all comments (JSON + readable digest) to paste in Slack"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${commentStore.exportDigest()}\n\n--- import payload ---\n${commentStore.exportJSON()}`)
+                  setCopied(true); setTimeout(() => setCopied(false), 1500)
+                }}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                {copied ? 'Copied!' : 'Export'}
+              </button>
+              <button
+                title="Paste someone's exported comments to merge them in"
+                onClick={() => {
+                  const raw = window.prompt('Paste exported comments (the JSON part):')
+                  if (!raw) return
+                  try {
+                    const json = raw.includes('--- import payload ---') ? raw.split('--- import payload ---')[1] : raw
+                    const n = commentStore.importJSON(json.trim())
+                    window.alert(`${n} new comment${n === 1 ? '' : 's'} imported.`)
+                  } catch { window.alert('Could not parse that — paste the JSON block from an Export.') }
+                }}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                Import
+              </button>
+            </span>
           </div>
           <div className="flex-1 overflow-y-auto">
             {shown.length === 0 && <p className="p-4 text-sm text-muted-foreground">No {filter !== 'all' ? filter : ''} comments yet.</p>}

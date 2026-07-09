@@ -34,11 +34,56 @@ function write(list: ProtoComment[]) {
   notify()
 }
 
+// Optional shared backend: set VITE_COMMENTS_API (e.g. "/api/comments" once the
+// Vercel KV function is enabled) and every read/write syncs through it. Without
+// it, localStorage-only — use Export/Import in the panel to pass comments around.
+const API = (import.meta as { env?: Record<string, string> }).env?.VITE_COMMENTS_API ?? ''
+
+async function pullRemote() {
+  if (!API) return
+  try {
+    const res = await fetch(`${API}?build=${encodeURIComponent(BUILD_ID)}`)
+    if (!res.ok) return
+    const remote: ProtoComment[] = await res.json()
+    // merge by id — remote wins on resolved state, local-only drafts survive
+    const local = read()
+    const byId = new Map(local.map((c) => [c.id, c]))
+    remote.forEach((c) => byId.set(c.id, c))
+    localStorage.setItem(KEY, JSON.stringify([...byId.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt))))
+    notify()
+  } catch { /* offline / not configured — localStorage stays the truth */ }
+}
+function pushRemote(c: ProtoComment) {
+  if (!API) return
+  fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(c) }).catch(() => {})
+}
+if (API) { pullRemote(); setInterval(pullRemote, 10000) }
+
 export const commentStore = {
   list: (): ProtoComment[] => read(),
-  add(c: ProtoComment) { write([c, ...read()]) },
+  add(c: ProtoComment) { write([c, ...read()]); pushRemote(c) },
   setResolved(id: string, resolved: boolean, by: string) {
-    write(read().map((c) => (c.id === id ? { ...c, resolved, resolvedBy: resolved ? by : undefined } : c)))
+    const next = read().map((c) => (c.id === id ? { ...c, resolved, resolvedBy: resolved ? by : undefined } : c))
+    write(next)
+    const changed = next.find((c) => c.id === id)
+    if (changed) pushRemote(changed)
+  },
+  // Export/Import: the no-backend way to share comments (paste JSON in Slack).
+  exportJSON(): string { return JSON.stringify(read(), null, 2) },
+  exportDigest(): string {
+    return read().map((c) =>
+      `${c.resolved ? '✅' : '💬'} ${c.author} · ${c.context || c.route} · on "${c.anchor.label}"\n   ${c.text}`,
+    ).join('\n')
+  },
+  importJSON(json: string): number {
+    const incoming: ProtoComment[] = JSON.parse(json)
+    if (!Array.isArray(incoming)) throw new Error('not a comment list')
+    const byId = new Map(read().map((c) => [c.id, c]))
+    let added = 0
+    incoming.forEach((c) => { if (c.id && c.text && !byId.has(c.id)) { byId.set(c.id, c); added++ } })
+    write([...byId.values()].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')))
+    incoming.forEach(pushRemote)
+    return added
   },
   subscribe(fn: Listener) { listeners.add(fn); return () => { listeners.delete(fn) } },
 }
