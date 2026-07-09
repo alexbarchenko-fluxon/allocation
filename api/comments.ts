@@ -10,8 +10,10 @@
 // GET  /api/comments?build=<id>  → ProtoComment[]
 // POST /api/comments             → upsert one comment (body = ProtoComment)
 
-const KV_URL = process.env.KV_REST_API_URL
-const KV_TOKEN = process.env.KV_REST_API_TOKEN
+// Vercel injects KV_REST_API_* for classic KV stores, UPSTASH_REDIS_REST_* for
+// marketplace Upstash Redis — same REST protocol, accept either.
+const KV_URL = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL
+const KV_TOKEN = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN
 
 async function kv(cmd: (string | number)[]) {
   const res = await fetch(`${KV_URL}`, {
