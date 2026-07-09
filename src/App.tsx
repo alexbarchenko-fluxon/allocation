@@ -9,6 +9,7 @@ import AccountsPage from '@/pages/AccountsPage'
 import StatsPage from '@/pages/StatsPage'
 import DemoPage from '@/pages/DemoPage'
 import StatesIndexPage from '@/pages/StatesIndexPage'
+import { CommentOverlay } from '@/proto-comments/CommentOverlay'
 import { RoleProvider } from '@/roles/role-context'
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
             <Route path="/states" element={<StatesIndexPage />} />
           </Routes>
         </div>
+        <CommentOverlay />
       </div>
     </BrowserRouter>
     </RoleProvider>

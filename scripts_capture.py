@@ -125,6 +125,8 @@ def save(page, name):
     # The floating flask is a personal dev toggle — keep it out of design exports.
     page.evaluate("document.querySelectorAll('button[aria-label*=\"list-based\"]').forEach(b => b.remove())")
     page.evaluate("document.querySelectorAll('[title^=\"Prototype scope\"]').forEach(el => el.remove())")
+    # The comment layer is a review tool, never part of the design.
+    page.evaluate("document.querySelectorAll('[data-proto-comments]').forEach(el => el.remove())")
     data = page.evaluate(SERIALIZE)
     html = wrap(data["css"], data["bodyHTML"], data["lang"])
     path = os.path.join(OUT, f"{name}.html")
