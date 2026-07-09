@@ -66,7 +66,10 @@ export const WithClosedRecords: Story = {
   args: { row: rowClosed, records: recordsClosed },
 }
 
-/** AJ scope (third pill): records listed one by one instead of grouped by location — each row carries its own actions. */
+/** AJ scope (third pill), per the Jul 9 design review: one flat list, no status or
+ * country grouping — every record is a row with its status badge and per-record
+ * actions; filled rows show the person AND the position's requirement. The grouped
+ * variant above stays for the Brandon A/B. */
 export const IndividualRecords: Story = {
   args: { row: rowMixed, records: recordsMixed, individual: true },
 }

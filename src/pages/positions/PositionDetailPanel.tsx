@@ -124,6 +124,59 @@ function FilledRow({ rec, onPerson }: { rec: DetailRecord; onPerson: (name: stri
   )
 }
 
+// AJ scope (meeting Jul 9): one flat list — no status or country grouping. Every
+// record is a row with its status badge; filled rows show the person AND the
+// position's requirement (Kenny: "is Madelyn filling an India seat or just from
+// India?"), open rows show the requirement with per-record actions.
+function FlatRow({ rec, monthPastDue, onPerson, onClose, onOpenRequest }: {
+  rec: DetailRecord
+  monthPastDue: boolean
+  onPerson: (name: string) => void
+  onClose: () => void
+  onOpenRequest: () => void
+}) {
+  const filled = rec.status === 'started' || rec.status === 'accepted'
+  const noReq = (rec.status === 'open' || rec.status === 'pending') && rec.noReq
+  const pastDue = !noReq && (rec.status === 'pending' || (rec.status === 'open' && monthPastDue))
+  const req = rec.loc || 'Anywhere'
+  return (
+    <div className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-b-0">
+      {filled && rec.person ? (
+        <button
+          onClick={() => onPerson(rec.person!.name)}
+          className="group -mx-1 flex min-w-0 items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-extended-hover"
+          title={`View ${rec.person.name} in People`}
+        >
+          <img src={avatarFor(rec.person.name)} alt={rec.person.name} className="h-6 w-6 shrink-0 rounded-full object-cover" />
+          <span className="flex min-w-0 flex-col text-left">
+            <span className="truncate text-sm font-medium text-foreground group-hover:underline">{rec.person.name}</span>
+            <span className="truncate text-xs text-muted-foreground">Starts {fmtFull(rec.person.start)} · Requirement: {req}</span>
+          </span>
+          <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+        </button>
+      ) : (
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: LOC_TOKEN[rec.loc] ?? 'var(--muted-foreground)' }} />
+          <span className="truncate text-sm font-medium text-foreground">{req}</span>
+        </span>
+      )}
+      <span className="flex shrink-0 items-center gap-2">
+        {filled
+          ? <Badge variant="success">{rec.status === 'started' ? 'On staff' : 'Offer accepted'}</Badge>
+          : noReq
+            ? <Badge variant="neutral">No request</Badge>
+            : pastDue
+              ? <Badge variant="warning">Past due</Badge>
+              : <Badge variant="outline" className="border-transparent bg-electric-blue-50 text-foreground">Open</Badge>}
+        {!filled && noReq && (
+          <Button variant="outline" size="sm" className="h-8" onClick={onOpenRequest}>Open request</Button>
+        )}
+        {!filled && <CloseIconBtn onClick={onClose} label="Close position" />}
+      </span>
+    </div>
+  )
+}
+
 function ClosedRow({ rec }: { rec: DetailRecord }) {
   return (
     <div className="flex flex-col gap-1 py-2 border-b border-border last:border-b-0">
@@ -232,8 +285,6 @@ export function PositionDetailPanel({ row, records, notes, showNotes = true, isO
   const closed = recs.filter((r) => r.status === 'closed')
 
   const groupByLoc = (list: DetailRecord[]) => {
-    // AJ scope: no aggregation — one row per record, each with its own actions.
-    if (individual) return list.map((r) => ({ key: r.id, loc: r.loc, items: [r] }))
     const m = new Map<string, DetailRecord[]>()
     for (const r of list) { if (!m.has(r.loc)) m.set(r.loc, []); m.get(r.loc)!.push(r) }
     return [...m.entries()].map(([loc, items]) => ({ key: loc, loc, items }))
@@ -261,6 +312,30 @@ export function PositionDetailPanel({ row, records, notes, showNotes = true, isO
 
         {/* Sections (keyed by row so the accordion resets when a different position is opened) */}
         <div key={row?.id} className="scrollbar-minimal flex-1 overflow-y-auto">
+          {individual ? (
+            // AJ scope, per the Jul 9 review: one flat list, no grouping at all —
+            // "just show the raw things", status next to each record.
+            <div className="border-t border-border px-5 py-4">
+              <div className="mb-1 flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">Positions</span>
+                <CountBadge n={filled.length + openRecs.length + noReqRecs.length + pastDue.length} tone="open" />
+              </div>
+              {[...pastDue, ...noReqRecs, ...openRecs, ...filled].map((r) => (
+                <FlatRow
+                  key={r.id}
+                  rec={r}
+                  monthPastDue={monthPastDue}
+                  onPerson={onPerson}
+                  onClose={() => onCloseRecords([r.id])}
+                  onOpenRequest={() => onOpenRequest([r.id])}
+                />
+              ))}
+              {row?.reopened && row.reopenedFrom && (
+                <p className="mt-2 text-xs leading-4 text-muted-foreground">Reopened — {row.reopenedFrom}.</p>
+              )}
+            </div>
+          ) : (
+          <>
           <Section label="Filled" count={filled.length} tone="filled" defaultOpen={filled.length > 0} emptyText="None filled yet.">
             {filled.map((r) => <FilledRow key={r.id} rec={r} onPerson={onPerson} />)}
           </Section>
@@ -299,6 +374,8 @@ export function PositionDetailPanel({ row, records, notes, showNotes = true, isO
                 </LocRow>
               ))}
             </Section>
+          )}
+          </>
           )}
 
           {closed.length > 0 && (
