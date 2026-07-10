@@ -1,123 +1,134 @@
+import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Person } from '@/mocks/people'
+import type { SeatState, PersonBadge } from '@/pages/dashboard/data'
 
-// ── Data types ────────────────────────────────────────────────────────────────
+// ── Small role/status pill shown after a person's name ─────────────────────────
+// TA = tentative, NB = non-billable, PA = pending approval. Colours per Figma.
 
-export interface SeatData {
-  personId: string | null  // null = open / unassigned seat
-  /** Short role label shown in the card header: "Eng", "Design", "PM", "TPM", "QA" */
-  role: string
-  hoursPerWeek: number
-  /**
-   * ISO "YYYY-MM-DD" — only provide when the seat starts in the future.
-   * Displayed as "Starts M/D". Omit for seats that are already active.
-   */
-  startDate?: string
-  nonBillable?: boolean
+const BADGE_STYLE: Record<PersonBadge, string> = {
+  TA: 'bg-[#e5e7eb] text-[#111827] dark:bg-[#374151] dark:text-white',
+  NB: 'bg-[#e7ebff] text-[#0e35ff] dark:bg-[#1e2a5a] dark:text-[#a5b4ff]',
+  PA: 'bg-[#d1d5db] text-[#111827] dark:bg-[#4b5563] dark:text-white',
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatSeatDate(iso: string): string {
-  const [, m, d] = iso.split('-')
-  return `${parseInt(m)}/${parseInt(d)}`
+export function SeatBadge({ kind }: { kind: PersonBadge }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center rounded-full px-1 text-[8px] font-medium leading-4',
+        BADGE_STYLE[kind],
+      )}
+    >
+      {kind}
+    </span>
+  )
 }
 
-function abbrevName(name: string): string {
-  const parts = name.trim().split(' ')
-  return parts.length >= 2
-    ? `${parts[0]} ${parts[parts.length - 1][0]}.`
-    : name
-}
-
-// ── Component ─────────────────────────────────────────────────────────────────
+// ── Seat card ──────────────────────────────────────────────────────────────────
 
 export interface SeatCardProps {
-  person: Person | null
+  state: SeatState
+  /** Short role label — "TPM", "Eng", "Design" */
   role: string
-  hoursPerWeek: number
-  /** Only shown when provided (future-scheduled seats only) */
-  startDate?: string
-  nonBillable?: boolean
+  /** "20/20h" for filled, "20h" for assign */
+  hoursLabel: string
+  /** "Starts 7/12" | "Overdue 7d" | undefined */
+  metaLabel?: string
+  /** Filled seats only */
+  person?: { short: string; avatar: string } | null
+  badges?: PersonBadge[]
+  selected?: boolean
   onClick?: () => void
   className?: string
 }
 
 export function SeatCard({
-  person,
+  state,
   role,
-  hoursPerWeek,
-  startDate,
-  nonBillable,
+  hoursLabel,
+  metaLabel,
+  person,
+  badges = [],
+  selected,
   onClick,
   className,
 }: SeatCardProps) {
-  const isOpen = person === null
+  const isAssign = state !== 'filled'
+  const isOverdue = state === 'overdue'
 
   return (
     <div
       className={cn(
-        'rounded-md border flex flex-col gap-2 p-3 cursor-pointer transition-colors',
-        isOpen
-          ? 'bg-badge-error border-red-200 dark:border-red-900'
-          : 'bg-background border-border hover:bg-extended-hover',
+        'flex h-12 w-[164px] shrink-0 cursor-pointer items-center gap-1 rounded p-2 transition-colors',
+        state === 'filled' &&
+          'border border-border bg-background hover:bg-extended-hover',
+        (state === 'upcoming' || state === 'open') &&
+          'border border-[color:var(--timeline-misalloc-ooo)] bg-badge-warning hover:brightness-[0.985]',
+        state === 'overdue' &&
+          'border border-[color:var(--timeline-unassigned-ooo)] bg-badge-error hover:brightness-[0.985]',
+        selected && 'ring-2 ring-primary ring-offset-1',
         className,
       )}
       onClick={onClick}
     >
-      {/* Top row: role · Xh · Starts M/D + optional NB badge */}
-      <div className="flex items-center justify-between gap-2 min-w-0">
-        <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+      {/* Leading: avatar (filled) or dashed + circle (assign) */}
+      {isAssign ? (
           <span
             className={cn(
-              'text-sm font-medium leading-none shrink-0',
-              isOpen ? 'text-badge-error-fg' : 'text-foreground',
+              'relative flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed',
+              isOverdue
+                ? 'border-badge-error-fg text-badge-error-fg'
+                : 'border-badge-warning-fg text-badge-warning-fg',
             )}
           >
-            {role}
-          </span>
-          <span className={cn('text-xs leading-none shrink-0', isOpen ? 'text-foreground' : 'text-muted-foreground')}>·</span>
-          <span className={cn('text-xs leading-none shrink-0', isOpen ? 'text-foreground' : 'text-muted-foreground')}>
-            {hoursPerWeek}h
-          </span>
-          {startDate && (
-            <>
-              <span className={cn('text-xs leading-none shrink-0', isOpen ? 'text-foreground' : 'text-muted-foreground')}>·</span>
-              <span className={cn('text-xs leading-none shrink-0 truncate', isOpen ? 'text-foreground' : 'text-muted-foreground')}>
-                Starts {formatSeatDate(startDate)}
-              </span>
-            </>
-          )}
-        </div>
-        {nonBillable && (
-          <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-accent text-accent-foreground">
-            NB
-          </span>
-        )}
-      </div>
-
-      {/* Separator — matches bg on open seats (visually flush), neutral on filled */}
-      <div className={cn('h-px w-full shrink-0', isOpen ? 'bg-badge-error' : 'bg-border')} />
-
-      {/* Person or Open Seat */}
-      <div className="flex items-center gap-2 min-w-0">
-        {isOpen ? (
-          <span className="text-sm font-medium leading-none text-badge-error-fg">
-            Open Seat
+            <Plus className="size-3.5" />
           </span>
         ) : (
-          <>
-            <img
-              src={person.avatar}
-              alt={person.name}
-              className="h-6 w-6 rounded-full object-cover shrink-0"
-            />
-            <span className="text-sm leading-none text-foreground truncate">
-              {abbrevName(person.name)}
-            </span>
-          </>
+          <img
+            src={person?.avatar}
+            alt={person?.short ?? ''}
+            className="size-6 shrink-0 rounded-full object-cover"
+          />
         )}
-      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          {/* Line 1 — name / Assign + trailing badges */}
+          <div className="flex w-full items-center gap-2">
+            <span
+              className={cn(
+                'min-w-0 flex-1 truncate text-sm leading-none',
+                isAssign ? 'text-badge-warning-fg' : 'text-foreground',
+              )}
+            >
+              {isAssign ? 'Assign' : person?.short}
+            </span>
+            {badges.length > 0 && (
+              <span className="flex shrink-0 items-center gap-1">
+                {badges.map((b) => (
+                  <SeatBadge key={b} kind={b} />
+                ))}
+              </span>
+            )}
+          </div>
+
+          {/* Line 2 — role · hours + trailing meta */}
+          <div className="flex w-full items-center justify-between gap-2 text-[10px] leading-4">
+            <span className="flex shrink-0 items-center gap-1">
+              <span className="text-foreground">{role}</span>
+              <span className="text-muted-foreground">{hoursLabel}</span>
+            </span>
+            {metaLabel && (
+              <span
+                className={cn(
+                  'shrink-0 truncate',
+                  isOverdue ? 'text-badge-error-fg' : 'text-muted-foreground',
+                )}
+              >
+                {metaLabel}
+              </span>
+            )}
+          </div>
+        </div>
     </div>
   )
 }

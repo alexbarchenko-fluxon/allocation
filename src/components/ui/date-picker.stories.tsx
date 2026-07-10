@@ -2,6 +2,17 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { DatePicker } from "./date-picker";
 
+/** Storybook's `date` control hands back a timestamp (number); normalise to Date. */
+function toDate(value: unknown): Date | undefined {
+  if (value == null) return undefined;
+  if (value instanceof Date) return value;
+  if (typeof value === "number" || typeof value === "string") {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? undefined : d;
+  }
+  return undefined;
+}
+
 const meta: Meta<typeof DatePicker> = {
   title: "UI/DatePicker",
   component: DatePicker,
@@ -10,36 +21,62 @@ const meta: Meta<typeof DatePicker> = {
   },
   tags: ["autodocs"],
   argTypes: {
-    value: { control: false },
+    // Data fields — editable from the Controls panel.
+    value: { control: "date", description: "Selected date" },
+    minDate: { control: "date", description: "Earliest selectable date" },
+    maxDate: { control: "date", description: "Latest selectable date" },
     onChange: { action: "changed" },
+    // Presentation / behaviour.
     disabled: { control: "boolean" },
     error: { control: "boolean" },
     placeholder: { control: "text" },
     displayFormat: { control: "text" },
+    side: { control: "inline-radio", options: ["top", "bottom", "left", "right"] },
   },
 };
 
 export default meta;
 type Story = StoryObj<typeof DatePicker>;
 
+type DatePickerArgs = Parameters<typeof DatePicker>[0];
+
 /**
- * Empty state — no date selected. Click to open the calendar popover.
+ * Interactive render: seeds local state from the `value` control so clicking a
+ * day updates the picker and fires the action. Editing `value` in the Controls
+ * panel re-seeds it via a `key` on this component (see the render functions).
+ */
+function InteractiveDatePicker(args: DatePickerArgs) {
+  const [date, setDate] = useState<Date | undefined>(toDate(args.value));
+  return (
+    <DatePicker
+      {...args}
+      value={date}
+      minDate={toDate(args.minDate)}
+      maxDate={toDate(args.maxDate)}
+      onChange={(d) => {
+        setDate(d);
+        args.onChange?.(d);
+      }}
+    />
+  );
+}
+
+/**
+ * Empty state — no date selected. Click to open the calendar popover, or set a
+ * date from the `value` control.
  */
 export const Default: Story = {
-  render: (args) => {
-    const [date, setDate] = useState<Date | undefined>(undefined);
-    return <DatePicker {...args} value={date} onChange={setDate} />;
-  },
+  render: (args) => <InteractiveDatePicker key={String(args.value)} {...args} />,
 };
 
 /**
- * Pre-populated with a selected date.
+ * Pre-populated with a selected date. Edit `value` in Controls to change it.
  */
 export const WithValue: Story = {
-  render: (args) => {
-    const [date, setDate] = useState<Date | undefined>(new Date(2026, 5, 15));
-    return <DatePicker {...args} value={date} onChange={setDate} />;
+  args: {
+    value: new Date(2026, 5, 15),
   },
+  render: (args) => <InteractiveDatePicker key={String(args.value)} {...args} />,
 };
 
 /**
@@ -50,40 +87,37 @@ export const Disabled: Story = {
     disabled: true,
     value: new Date(2026, 5, 15),
   },
+  render: (args) => <InteractiveDatePicker key={String(args.value)} {...args} />,
 };
 
 /**
  * Error state — border turns destructive red to signal a validation issue.
  */
 export const WithError: Story = {
-  render: (args) => {
-    const [date, setDate] = useState<Date | undefined>(undefined);
-    return <DatePicker {...args} value={date} onChange={setDate} error />;
+  args: {
+    error: true,
   },
+  render: (args) => <InteractiveDatePicker key={String(args.value)} {...args} />,
 };
 
 /**
  * Min / max date constraints — dates outside the window are greyed out and
- * unselectable. Window is set to the current month ± 30 days.
+ * unselectable. Edit `minDate` / `maxDate` in Controls to move the window.
  */
 export const WithDateConstraints: Story = {
-  render: (args) => {
-    const [date, setDate] = useState<Date | undefined>(undefined);
-    const today = new Date();
-    const minDate = new Date(today);
-    minDate.setDate(today.getDate() - 30);
-    const maxDate = new Date(today);
-    maxDate.setDate(today.getDate() + 30);
-    return (
-      <DatePicker
-        {...args}
-        value={date}
-        onChange={setDate}
-        minDate={minDate}
-        maxDate={maxDate}
-      />
-    );
+  args: {
+    minDate: (() => {
+      const d = new Date();
+      d.setDate(d.getDate() - 30);
+      return d;
+    })(),
+    maxDate: (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 30);
+      return d;
+    })(),
   },
+  render: (args) => <InteractiveDatePicker key={String(args.value)} {...args} />,
 };
 
 /**
@@ -91,18 +125,12 @@ export const WithDateConstraints: Story = {
  * (e.g. "Jun 15, 2026") instead of the default "MM/dd/yyyy".
  */
 export const CustomDisplayFormat: Story = {
-  render: (args) => {
-    const [date, setDate] = useState<Date | undefined>(new Date(2026, 5, 15));
-    return (
-      <DatePicker
-        {...args}
-        value={date}
-        onChange={setDate}
-        displayFormat="MMM d, yyyy"
-        placeholder="MMM D, YYYY"
-      />
-    );
+  args: {
+    value: new Date(2026, 5, 15),
+    displayFormat: "MMM d, yyyy",
+    placeholder: "MMM D, YYYY",
   },
+  render: (args) => <InteractiveDatePicker key={String(args.value)} {...args} />,
 };
 
 /**

@@ -9,6 +9,8 @@ const meta: Meta<typeof DateInput> = {
   },
   tags: ["autodocs"],
   argTypes: {
+    // Data field — editable from the Controls panel.
+    defaultValue: { control: "text", description: "Initial date text (MM/DD/YYYY)" },
     error: { control: "boolean" },
     disabled: { control: "boolean" },
     placeholder: { control: "text" },
@@ -24,12 +26,14 @@ export default meta;
 type Story = StoryObj<typeof DateInput>;
 
 /**
- * Default empty state with placeholder.
+ * Default empty state with placeholder. Type a date in the `defaultValue`
+ * control to pre-fill the field. The input is re-keyed on `defaultValue` so
+ * Controls edits reset the field.
  */
 export const Default: Story = {
   render: (args) => (
     <div className="w-48">
-      <DateInput {...args} />
+      <DateInput key={String(args.defaultValue)} {...args} />
     </div>
   ),
 };
@@ -38,9 +42,12 @@ export const Default: Story = {
  * With a pre-filled date value.
  */
 export const WithValue: Story = {
+  args: {
+    defaultValue: "09/01/2025",
+  },
   render: (args) => (
     <div className="w-48">
-      <DateInput {...args} defaultValue="09/01/2025" />
+      <DateInput key={String(args.defaultValue)} {...args} />
     </div>
   ),
 };
@@ -49,9 +56,13 @@ export const WithValue: Story = {
  * Error state — border turns destructive red.
  */
 export const Error: Story = {
+  args: {
+    error: true,
+    defaultValue: "13/99/2025",
+  },
   render: (args) => (
     <div className="w-48">
-      <DateInput {...args} error defaultValue="13/99/2025" />
+      <DateInput key={String(args.defaultValue)} {...args} />
     </div>
   ),
 };
@@ -60,9 +71,13 @@ export const Error: Story = {
  * Disabled state.
  */
 export const Disabled: Story = {
+  args: {
+    disabled: true,
+    defaultValue: "12/31/2025",
+  },
   render: (args) => (
     <div className="w-48">
-      <DateInput {...args} disabled defaultValue="12/31/2025" />
+      <DateInput key={String(args.defaultValue)} {...args} />
     </div>
   ),
 };
