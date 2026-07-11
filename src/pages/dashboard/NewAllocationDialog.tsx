@@ -50,9 +50,9 @@ function IconButton({ children, onClick, title }: { children: React.ReactNode; o
 
 /**
  * Confirmation shown before an allocation is committed from the modal's
- * candidate list (Figma 4096-18185). A muted body frames a white card that
- * recaps the person, the proposed seat, any overlapping allocations and their
- * reporting line, then lets the planner Cancel / Propose / Confirm.
+ * candidate list (Figma 4096-18185). A flat white card recaps the person, the
+ * proposed seat, any overlapping allocations and their reporting line, then
+ * lets the planner Cancel / Propose / Confirm.
  */
 export function NewAllocationDialog({
   open, onOpenChange, candidate, period, hoursPerWeek, onPropose, onConfirm,
@@ -73,84 +73,78 @@ export function NewAllocationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[532px] gap-0 overflow-hidden bg-muted p-0">
-        {/* Header — white */}
-        <div className="border-b border-border bg-background px-6 py-6">
+      <DialogContent className="max-w-[532px] gap-0 overflow-hidden rounded-2xl p-0 sm:rounded-2xl">
+        {/* Header */}
+        <div className="border-b border-border px-6 py-6">
           <DialogTitle className="text-2xl font-semibold leading-8">New Allocation</DialogTitle>
         </div>
 
-        {/* Body — muted, holding the white card */}
-        <div className="p-6">
-          <div className="rounded-lg border border-border bg-background p-4">
-            <p className="text-sm font-medium text-muted-foreground">Current Allocation</p>
+        {/* Body — flat white, content sits directly */}
+        <div className="space-y-4 p-6">
+          {/* Person */}
+          <div className="flex items-center gap-2">
+            <img src={candidate.avatar} alt={candidate.name} className="size-9 shrink-0 rounded-full object-cover" />
+            <div className="min-w-0 flex-1">
+              <span className="block truncate text-base font-medium text-foreground">{candidate.name}</span>
+              <span className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <DraftingCompass className="h-3.5 w-3.5" />{candidate.role}
+              </span>
+            </div>
+            <IconButton title="Message on Slack" onClick={() => window.open('https://slack.com', '_blank')}>
+              <img src={slackLogo} alt="Slack" className="h-4 w-4" />
+            </IconButton>
+            <IconButton title="Remove" onClick={() => onOpenChange(false)}>
+              <Trash2 className="h-4 w-4" />
+            </IconButton>
+          </div>
 
-            <div className="mt-4">
-              {/* Person */}
-              <div className="flex items-start gap-2">
-                <img src={candidate.avatar} alt={candidate.name} className="size-10 shrink-0 rounded-full object-cover" />
-                <div className="min-w-0 flex-1">
-                  <span className="block truncate text-base font-medium text-foreground">{candidate.name}</span>
-                  <span className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <DraftingCompass className="h-3.5 w-3.5" />{candidate.role}
+          {/* Proposed seat — dates + hours/weeks */}
+          <div className="flex flex-wrap items-center gap-3 rounded-md bg-muted px-3 py-2">
+            <span className="flex items-center gap-1.5">
+              <DateField iso={period.startDate} icon={false} className="w-[94px]" />
+              <span className="text-muted-foreground">–</span>
+              <DateField iso={period.endDate} icon={false} className="w-[94px]" />
+            </span>
+            <span className="whitespace-nowrap text-xs text-muted-foreground">{hoursPerWeek}h/w · {weeks} w</span>
+          </div>
+
+          {/* Overlapping allocations */}
+          {overlaps.length > 0 && (
+            <div className="space-y-2">
+              {overlaps.map((b) => (
+                <div
+                  key={b.id}
+                  className={cn('flex h-9 items-center justify-between gap-2 rounded border px-4 py-1', BLOCK_TONE[b.tone] ?? BLOCK_TONE.proposed)}
+                >
+                  <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#111827]">
+                    {b.label}
+                    {b.hours != null && <span className="font-normal"> · {b.hours}h/w</span>}
+                    <span className="font-normal"> · {fmtDate(b.startDate)} – {fmtDate(b.endDate)} · {weeksBetween(b.startDate, b.endDate)} w</span>
                   </span>
-                </div>
-                <IconButton title="Message on Slack" onClick={() => window.open('https://slack.com', '_blank')}>
-                  <img src={slackLogo} alt="Slack" className="h-4 w-4" />
-                </IconButton>
-                <IconButton title="Remove" onClick={() => onOpenChange(false)}>
-                  <Trash2 className="h-4 w-4" />
-                </IconButton>
-              </div>
-
-              {/* Proposed seat — dates + hours/weeks */}
-              <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md bg-muted px-3 py-2">
-                <span className="flex items-center gap-1.5">
-                  <DateField iso={period.startDate} icon={false} className="w-[94px]" />
-                  <span className="text-muted-foreground">–</span>
-                  <DateField iso={period.endDate} icon={false} className="w-[94px]" />
-                </span>
-                <span className="whitespace-nowrap text-xs text-muted-foreground">{hoursPerWeek}h/w · {weeks} w</span>
-              </div>
-
-              {/* Overlapping allocations */}
-              {overlaps.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {overlaps.map((b) => (
-                    <div
-                      key={b.id}
-                      className={cn('flex h-9 items-center justify-between gap-2 rounded border px-4 py-1', BLOCK_TONE[b.tone] ?? BLOCK_TONE.proposed)}
-                    >
-                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#111827]">
-                        {b.label}
-                        {b.hours != null && <span className="font-normal"> · {b.hours}h/w</span>}
-                        <span className="font-normal"> · {fmtDate(b.startDate)} – {fmtDate(b.endDate)} · {weeksBetween(b.startDate, b.endDate)} w</span>
-                      </span>
-                      {b.badge && (
-                        <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-xs font-medium', BADGE_TONE[b.badgeTone ?? 'neutral'])}>
-                          {b.badge}
-                        </span>
-                      )}
-                    </div>
+                  {b.badges?.map((bd) => (
+                    <span key={bd.label} className={cn('shrink-0 rounded-full px-2 py-0.5 text-xs font-medium', BADGE_TONE[bd.tone ?? 'neutral'])}>
+                      {bd.label}
+                    </span>
                   ))}
                 </div>
-              )}
-
-              {/* Reports to */}
-              <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-                <Users className="h-3.5 w-3.5" />Reports to {REPORTS_TO}
-              </div>
-
-              {/* Availability */}
-              <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
-                <Checkbox className="mt-0.5" />
-                <span>This allocation will not reduce {firstName}'s availability for new projects</span>
-              </label>
+              ))}
             </div>
+          )}
+
+          {/* Reports to */}
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Users className="h-3.5 w-3.5" />Reports to {REPORTS_TO}
           </div>
+
+          {/* Availability */}
+          <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
+            <Checkbox className="mt-0.5" />
+            <span>This allocation will not reduce {firstName}'s availability for new projects</span>
+          </label>
         </div>
 
-        {/* Footer — white */}
-        <div className="flex items-center gap-2 border-t border-border bg-background px-6 py-4">
+        {/* Footer */}
+        <div className="flex items-center gap-2 border-t border-border px-6 py-4">
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
           <span className="ml-auto flex items-center gap-2">
             <Button variant="secondary" size="sm" onClick={onPropose}>Propose</Button>

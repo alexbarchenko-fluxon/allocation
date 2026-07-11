@@ -81,6 +81,17 @@ const BADGE_TONE: Record<string, string> = {
   gray: 'bg-[#d1d5db] text-[#111827] dark:bg-[#4b5563] dark:text-white',
 }
 
+export interface BarBadge { label: string; tone?: keyof typeof BADGE_TONE }
+
+/** An existing commitment this bar overlaps — powers the multi-conflict tooltip. */
+export interface BarConflict {
+  label: string
+  startDate: string
+  endDate: string
+  /** Parenthetical marker after the dates, e.g. "TA" / "PA". */
+  note?: string
+}
+
 export interface TimelineBarData {
   id: string
   startDate: string
@@ -88,8 +99,10 @@ export interface TimelineBarData {
   label?: string
   hours?: number
   tone: BarTone
-  badge?: string
-  badgeTone?: keyof typeof BADGE_TONE
+  /** Trailing pills (e.g. NB, TA, PA). PA only ever appears on a `proposed` (grey) bar. */
+  badges?: BarBadge[]
+  /** Overlapping commitments — when present, the tooltip lists them as conflicts. */
+  conflicts?: BarConflict[]
   avatar?: string
   draggable?: boolean
 }
@@ -106,7 +119,7 @@ function minBarWidth(bar: TimelineBarData): number {
   const chars = (bar.hours != null ? String(bar.hours).length + 3 : 0) + (bar.label?.length ?? 0)
   let w = 20 + chars * 6.6
   if (bar.avatar) w += 22
-  if (bar.badge) w += 34
+  w += (bar.badges?.length ?? 0) * 34
   return Math.min(Math.round(w), 420)
 }
 
@@ -121,7 +134,47 @@ function TipCol({ label, children }: { label: string; children: React.ReactNode 
   )
 }
 
+/** Whole weeks two periods overlap (0 when they don't intersect). */
+function overlapWeeks(a: Period, b: Period): number {
+  const start = Math.max(new Date(a.startDate).getTime(), new Date(b.startDate).getTime())
+  const end = Math.min(new Date(a.endDate).getTime(), new Date(b.endDate).getTime())
+  if (end <= start) return 0
+  return Math.max(1, Math.round((end - start) / (7 * 86_400_000)))
+}
+
 function BarTooltip({ bar }: { bar: TimelineBarData }) {
+  // Multi-conflict variant (Figma 4093-16182) — only the overlapping commitments.
+  const conflicts = (bar.conflicts ?? [])
+    .map((c) => ({ ...c, weeks: overlapWeeks(bar, c) }))
+    .filter((c) => c.weeks > 0)
+
+  if (conflicts.length > 0) {
+    return (
+      <div className="flex gap-4">
+        <TipCol label="Conflict with">
+          {conflicts.map((c, i) => (
+            <span key={i} className="whitespace-nowrap text-xs font-medium leading-[17px] text-white">{c.label}</span>
+          ))}
+        </TipCol>
+        <TipCol label="Start-end">
+          {conflicts.map((c, i) => (
+            <span key={i} className="whitespace-nowrap text-xs leading-[17px] text-white">
+              {fmtDate(c.startDate)} – {fmtDate(c.endDate)}{c.note ? ` (${c.note})` : ''}
+            </span>
+          ))}
+        </TipCol>
+        <TipCol label="Overlapping">
+          {conflicts.map((c, i) => (
+            <span key={i} className="whitespace-nowrap text-xs leading-[17px] text-white">
+              {c.weeks} {c.weeks === 1 ? 'week' : 'weeks'}
+            </span>
+          ))}
+        </TipCol>
+      </div>
+    )
+  }
+
+  // Single-commitment variant.
   const isOOO = bar.tone === 'ooo'
   const weeks = weeksBetween(bar.startDate, bar.endDate)
   return (
@@ -131,7 +184,7 @@ function BarTooltip({ bar }: { bar: TimelineBarData }) {
           {isOOO ? 'Time-Off' : bar.label ?? 'Allocation'}
         </span>
       </TipCol>
-      <TipCol label="Start–end">
+      <TipCol label="Start-end">
         <span className="whitespace-nowrap text-xs leading-[17px] text-white">
           {fmtDate(bar.startDate)} – {fmtDate(bar.endDate)}
         </span>
@@ -238,9 +291,9 @@ function Bar({
         {bar.hours != null && bar.label && <span className="text-muted-foreground"> · </span>}
         {bar.label}
       </span>
-      {bar.badge && (
-        <span className={cn('shrink-0 rounded-full px-1.5 text-[10px] font-medium leading-4', BADGE_TONE[bar.badgeTone ?? 'neutral'])}>{bar.badge}</span>
-      )}
+      {bar.badges?.map((b) => (
+        <span key={b.label} className={cn('shrink-0 rounded-full px-1.5 text-[10px] font-medium leading-4', BADGE_TONE[b.tone ?? 'neutral'])}>{b.label}</span>
+      ))}
       {bar.draggable && onChange && (
         <>
           <span className="absolute left-0 top-0 h-full w-1.5 cursor-ew-resize" onPointerDown={onPointerDown('l')} onPointerMove={onPointerMove} onPointerUp={onPointerUp} />

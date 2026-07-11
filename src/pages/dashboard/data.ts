@@ -181,8 +181,8 @@ export interface CandidateBar {
   hours?: number
   label?: string
   tone: 'assigned' | 'misalloc' | 'unassigned' | 'ooo' | 'flag' | 'available' | 'proposed'
-  badge?: string
-  badgeTone?: 'dark' | 'blue' | 'orange' | 'neutral' | 'gray'
+  /** Trailing pills. PA only ever rides a `proposed` (grey) bar; TA/NB may ride an orange one. */
+  badges?: { label: string; tone?: 'dark' | 'blue' | 'orange' | 'neutral' | 'gray' }[]
 }
 export type TechScope = 'fullstack' | 'frontend' | 'backend'
 export interface ModalCandidate {
@@ -208,13 +208,15 @@ export const MODAL_CANDIDATES: ModalCandidate[] = [
   },
   {
     id: 'c-james-t', name: 'James T.', avatar: av(2), role: 'Software Engineer', scope: 'backend',
-    hoursLabel: '40/40h', tags: [{ label: 'PA', tone: 'gray' }],
-    bars: [{ id: 'b1', startDate: '2026-09-01', endDate: '2026-10-15', hours: 20, label: 'Project Name', tone: 'misalloc', badge: 'PA', badgeTone: 'gray' }],
+    hoursLabel: '40/40h', tags: [],
+    // PA → grey (proposed) bar, never orange.
+    bars: [{ id: 'b1', startDate: '2026-09-01', endDate: '2026-10-15', hours: 20, label: 'Project Name', tone: 'proposed', badges: [{ label: 'PA', tone: 'gray' }] }],
   },
   {
     id: 'c-sofia-l', name: 'Sofia L.', avatar: av(1), role: 'Software Engineer', scope: 'fullstack',
-    hoursLabel: '20/40h', tags: [{ label: 'TA', tone: 'orange' }],
-    bars: [{ id: 'b1', startDate: '2026-08-01', endDate: '2026-09-20', hours: 40, label: 'Project Name', tone: 'misalloc', badge: 'NB', badgeTone: 'blue' }],
+    hoursLabel: '20/40h', tags: [],
+    // TA lives on the project bar (alongside NB), not next to the name.
+    bars: [{ id: 'b1', startDate: '2026-08-01', endDate: '2026-09-20', hours: 40, label: 'Project Name', tone: 'misalloc', badges: [{ label: 'NB', tone: 'blue' }, { label: 'TA', tone: 'orange' }] }],
   },
   {
     id: 'c-priya-k', name: 'Priya K.', avatar: av(0), role: 'Software Engineer', scope: 'frontend',
@@ -223,15 +225,15 @@ export const MODAL_CANDIDATES: ModalCandidate[] = [
   },
   {
     id: 'c-carlos-m', name: 'Carlos M.', avatar: av(24), role: 'Software Engineer', scope: 'backend',
-    hoursLabel: '20/40h', tags: [{ label: 'TA', tone: 'orange' }, { label: 'OOO', tone: 'orange' }],
+    hoursLabel: '20/40h', tags: [{ label: 'OOO', tone: 'orange' }],
     bars: [
       { id: 'b1', startDate: '2026-07-06', endDate: '2026-07-11', tone: 'ooo' },
-      { id: 'b2', startDate: '2026-10-01', endDate: '2026-11-15', hours: 40, label: 'Project Name', tone: 'misalloc', badge: 'NB', badgeTone: 'blue' },
+      { id: 'b2', startDate: '2026-10-01', endDate: '2026-11-15', hours: 40, label: 'Project Name', tone: 'misalloc', badges: [{ label: 'NB', tone: 'blue' }, { label: 'TA', tone: 'orange' }] },
     ],
   },
   {
     id: 'c-noah-b', name: 'Noah B.', avatar: av(11), role: 'Software Engineer', scope: 'fullstack',
-    hoursLabel: '20/40h', tags: [{ label: 'Available in 2w', tone: 'success' }],
+    hoursLabel: '20/40h', tags: [{ label: 'Available in 2w', tone: 'neutral' }],
     bars: [{ id: 'b1', startDate: '2026-06-01', endDate: '2026-06-26', label: 'Project Name', tone: 'unassigned' }],
   },
   {
@@ -247,9 +249,9 @@ export const MODAL_CANDIDATES: ModalCandidate[] = [
   },
   {
     id: 'c-tara-s', name: 'Tara S.', avatar: av(46), role: 'Software Engineer', scope: 'fullstack',
-    hoursLabel: '20/40h', tags: [{ label: 'PA', tone: 'gray' }],
+    hoursLabel: '20/40h', tags: [],
     // Proposed (pending approval) to another project → muted grey bar + grey PA pill.
-    bars: [{ id: 'b1', startDate: '2026-09-05', endDate: '2026-10-20', hours: 20, label: 'Project Name', tone: 'proposed', badge: 'PA', badgeTone: 'gray' }],
+    bars: [{ id: 'b1', startDate: '2026-09-05', endDate: '2026-10-20', hours: 20, label: 'Project Name', tone: 'proposed', badges: [{ label: 'PA', tone: 'gray' }] }],
   },
   {
     id: 'c-omar-h', name: 'Omar H.', avatar: av(30), role: 'Software Engineer', scope: 'frontend',
@@ -258,12 +260,12 @@ export const MODAL_CANDIDATES: ModalCandidate[] = [
   },
   {
     id: 'c-lena-k', name: 'Lena K.', avatar: av(13), role: 'Software Engineer', scope: 'backend',
-    hoursLabel: '40/40h', tags: [{ label: 'PA', tone: 'gray' }],
-    bars: [{ id: 'b1', startDate: '2026-09-10', endDate: '2026-11-20', hours: 40, label: 'Project Name', tone: 'misalloc', badge: 'PA', badgeTone: 'gray' }],
+    hoursLabel: '40/40h', tags: [],
+    bars: [{ id: 'b1', startDate: '2026-09-10', endDate: '2026-11-20', hours: 40, label: 'Project Name', tone: 'proposed', badges: [{ label: 'PA', tone: 'gray' }] }],
   },
   {
     id: 'c-victor-s', name: 'Victor S.', avatar: av(35), role: 'Software Engineer', scope: 'fullstack',
-    hoursLabel: '20/40h', tags: [{ label: 'Available in 2w', tone: 'success' }],
+    hoursLabel: '20/40h', tags: [{ label: 'Available in 2w', tone: 'neutral' }],
     bars: [{ id: 'b1', startDate: '2026-06-01', endDate: '2026-06-20', label: 'Project Name', tone: 'unassigned' }],
   },
   {
@@ -272,21 +274,22 @@ export const MODAL_CANDIDATES: ModalCandidate[] = [
   },
   {
     id: 'c-david-m', name: 'David M.', avatar: av(40), role: 'Software Engineer', scope: 'backend',
-    hoursLabel: '20/40h', tags: [{ label: 'TA', tone: 'orange' }],
-    bars: [{ id: 'b1', startDate: '2026-08-15', endDate: '2026-10-05', hours: 20, label: 'Project Name', tone: 'misalloc' }],
+    hoursLabel: '20/40h', tags: [],
+    // TA lives on the project bar, not next to the name.
+    bars: [{ id: 'b1', startDate: '2026-08-15', endDate: '2026-10-05', hours: 20, label: 'Project Name', tone: 'misalloc', badges: [{ label: 'TA', tone: 'orange' }] }],
   },
   {
     id: 'c-hana-t', name: 'Hana T.', avatar: av(17), role: 'Software Engineer', scope: 'fullstack',
     hoursLabel: '20/40h', tags: [{ label: 'OOO', tone: 'orange' }],
     bars: [
       { id: 'b1', startDate: '2026-08-01', endDate: '2026-08-06', tone: 'ooo' },
-      { id: 'b2', startDate: '2026-09-20', endDate: '2026-11-25', hours: 40, label: 'Project Name', tone: 'misalloc', badge: 'NB', badgeTone: 'blue' },
+      { id: 'b2', startDate: '2026-09-20', endDate: '2026-11-25', hours: 40, label: 'Project Name', tone: 'misalloc', badges: [{ label: 'NB', tone: 'blue' }] },
     ],
   },
   {
     id: 'c-peter-w', name: 'Peter W.', avatar: av(44), role: 'Software Engineer', scope: 'frontend',
-    hoursLabel: '40/40h', tags: [{ label: 'PA', tone: 'gray' }],
-    bars: [{ id: 'b1', startDate: '2026-06-24', endDate: '2026-11-10', hours: 40, label: 'Project Name', tone: 'misalloc', badge: 'PA', badgeTone: 'gray' }],
+    hoursLabel: '40/40h', tags: [],
+    bars: [{ id: 'b1', startDate: '2026-06-24', endDate: '2026-11-10', hours: 40, label: 'Project Name', tone: 'proposed', badges: [{ label: 'PA', tone: 'gray' }] }],
   },
 ]
 

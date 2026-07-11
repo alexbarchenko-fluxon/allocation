@@ -10,7 +10,7 @@ import { DateField } from './DateField'
 import { TimelineMonths, TimelineLane, type TimelineBarData, type Period } from './AllocationTimeline'
 import { buildWindow } from './timeline-scale'
 import { useTrackWidth } from './useTrackWidth'
-import { fmtDate } from './format'
+import { fmtDate, weeksBetween } from './format'
 import { MODAL_CANDIDATES, CANDIDATE_PERSON_MAP, type Seat, type CandidateTagTone, type ModalCandidate } from './data'
 import { NewAllocationDialog } from './NewAllocationDialog'
 import { DeleteConfirmDialog } from './DeleteConfirmDialog'
@@ -98,14 +98,36 @@ export function AllocationModal({
 
   // Current Allocation lane bars (proposed = orange + PA, assigned = blue).
   const allocatedIds = order.filter((id) => status[id])
+  const hasCurrent = allocatedIds.length > 0
+  // Person-weeks summed across the current allocations, out of the seat total.
+  const allocatedWeeks = allocatedIds.reduce((sum, id) => {
+    const r = rangeFor(id)
+    return sum + weeksBetween(r.startDate, r.endDate)
+  }, 0)
   const currentBars: TimelineBarData[] = allocatedIds.map((id) => {
     const c = CAND_MAP.get(id)!
     const st = status[id]
     const r = rangeFor(id)
+    // Does the proposed range clash with any of this person's existing commitments?
+    const overlaps = (b: { startDate: string; endDate: string }) =>
+      Math.min(+new Date(r.endDate), +new Date(b.endDate)) > Math.max(+new Date(r.startDate), +new Date(b.startDate))
+    const hasConflict = c.bars.some((b) => b.tone !== 'flag' && overlaps(b))
     return {
       id, startDate: r.startDate, endDate: r.endDate, label: c.name,
-      tone: st === 'assigned' ? 'primary' : 'misalloc',
-      badge: st === 'proposed' ? 'PA' : undefined, badgeTone: 'gray',
+      // Assigned → blue. Proposed → grey PA bar, but turns orange when it clashes
+      // with an existing commitment (a conflicting proposal). PA pill stays grey.
+      tone: st === 'assigned' ? 'primary' : hasConflict ? 'misalloc' : 'proposed',
+      badges: st === 'proposed' ? [{ label: 'PA', tone: 'gray' }] : undefined,
+      // The person's existing commitments — the tooltip flags any that overlap.
+      conflicts: c.bars
+        .filter((b) => b.tone !== 'flag')
+        .map((b) => ({
+          label: b.tone === 'ooo' ? 'Time-Off' : b.label ?? 'Project',
+          startDate: b.startDate,
+          endDate: b.endDate,
+          // Tentative allocations are marked "(TA)" after the dates.
+          note: b.badges?.some((x) => x.label === 'TA') ? 'TA' : undefined,
+        })),
       avatar: c.avatar, draggable: true,
     }
   })
@@ -170,7 +192,7 @@ export function AllocationModal({
               whichever section is crossing it. Never duplicated. */}
           <div className="sticky top-0 z-30 flex items-center border-b border-border bg-muted" style={{ height: CONTROLS_H }}>
             <div className={cn(LEFT, 'px-6')}>
-              <span className="text-sm font-medium text-foreground">{activeSection === 'new' ? 'New Allocations' : 'Current Allocation'}</span>
+              <span className="text-sm font-medium text-foreground">{!hasCurrent || activeSection === 'new' ? 'New Allocations' : 'Current Allocation'}</span>
             </div>
             <div className="relative min-w-0 flex-1">
               <div ref={ref} className="w-full pt-1"><TimelineMonths width={width} win={win} /></div>
@@ -181,35 +203,66 @@ export function AllocationModal({
             </div>
           </div>
 
-          {/* Current Allocation content */}
-          <div className="flex items-stretch border-b border-border">
-            <div className={cn(LEFT, 'flex items-center gap-2 px-6 py-3')}>
-              <DateField iso={seat.startDate} icon={false} className="w-[100px]" />
-              <span className="text-muted-foreground">–</span>
-              <DateField iso={seat.endDate} icon={false} className="w-[100px]" />
+          {/* Current Allocation content — hidden until something is allocated. */}
+          {hasCurrent && (
+            <div className="flex items-stretch border-b border-border">
+              <div className={cn(LEFT, 'flex items-center gap-3 px-6 py-3')}>
+                {allocatedIds.length === 1 ? (
+                  <>
+                    <img src={CAND_MAP.get(allocatedIds[0])!.avatar} alt="" className="size-10 shrink-0 rounded-full object-cover" />
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-medium text-foreground">{CAND_MAP.get(allocatedIds[0])!.name}</p>
+                      <p className="text-xs text-muted-foreground">Allocated {allocatedWeeks}/{seat.weeks}w</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex shrink-0 -space-x-2">
+                      {allocatedIds.slice(0, 3).map((id) => (
+                        <img key={id} src={CAND_MAP.get(id)!.avatar} alt="" className="size-9 rounded-full object-cover ring-2 ring-background" />
+                      ))}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-medium text-foreground">{allocatedIds.length} people</p>
+                      <p className="text-xs text-muted-foreground">Allocated {allocatedWeeks}/{seat.weeks}w</p>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <TimelineLane width={width} win={win} bars={currentBars} projectPeriod={projectPeriod} setPeriod={setPeriod} onChange={onBarChange} />
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <TimelineLane width={width} win={win} bars={currentBars} projectPeriod={projectPeriod} setPeriod={setPeriod} onChange={onBarChange} />
-            </div>
-          </div>
+          )}
 
           {/* New Allocations title — its own gray bar; tucks behind the control
-              (z below it) as you scroll, so the control's label becomes its title. */}
-          <div ref={newTitleRef} className="sticky top-0 z-10 flex items-center border-b border-border bg-muted px-6" style={{ height: CONTROLS_H }}>
-            <span className="text-sm font-medium text-foreground">New Allocations</span>
-          </div>
-
-          {/* New Allocations filters — stick just beneath the timeline control */}
-          <div className="sticky z-20 flex flex-wrap items-center gap-3 border-b border-border bg-muted px-6 py-3" style={{ top: CONTROLS_H }}>
-            <DateField iso={seat.startDate} icon={false} className="w-[100px]" />
-            <span className="text-muted-foreground">–</span>
-            <DateField iso={seat.endDate} icon={false} className="w-[100px]" />
-            <HoursField hours={20} />
-            <div className="relative w-[280px]">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search People" className="h-9 pl-8" />
+              (z below it) as you scroll, so the control's label becomes its title.
+              Skipped when there's no Current section — the pinned control already
+              reads "New Allocations". */}
+          {hasCurrent && (
+            <div ref={newTitleRef} className="sticky top-0 z-10 flex items-center border-b border-border bg-muted px-6" style={{ height: CONTROLS_H }}>
+              <span className="text-sm font-medium text-foreground">New Allocations</span>
             </div>
-            <FilterMultiSelect label="By technical scope" options={TECH_SCOPE_OPTIONS} value={techScope} onChange={setTechScope} />
+          )}
+
+          {/* New Allocations filters — stick just beneath the timeline control.
+              Layout mirrors Figma "Dashboard / Filters" (4093:16662): search →
+              date range → hours on the left (flex-1); scope select + switches
+              pushed to the far right. */}
+          <div className="sticky z-20 flex flex-wrap items-center gap-3 border-b border-border bg-muted px-6 py-3" style={{ top: CONTROLS_H }}>
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="relative w-[332px] shrink-0">
+                <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search People" className="h-9 pr-8" />
+                <Search className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <DateField iso={seat.startDate} icon={false} className="w-[100px]" />
+                <span className="text-muted-foreground">–</span>
+                <DateField iso={seat.endDate} icon={false} className="w-[100px]" />
+              </div>
+              <HoursField hours={20} />
+            </div>
+            <FilterMultiSelect label="By technical scope" options={TECH_SCOPE_OPTIONS} value={techScope} onChange={setTechScope} className="w-[180px]" />
             <label className="flex items-center gap-2 text-sm text-foreground">
               <Switch checked={fullSpanOnly} onCheckedChange={setFullSpanOnly} /> Fits full span only
             </label>
