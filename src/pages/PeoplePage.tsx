@@ -11,6 +11,7 @@ import { InputGroup } from '@/components/ui/input-group'
 import { FilterMultiSelect } from '@/components/ui/filter-multiselect'
 import { SidePanelSection } from '@/components/ui/side-panel-section'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { PERSON_BADGE_PILL, PERSON_BADGE_STYLE } from '@/pages/dashboard/data'
 import LinkedInLogo from '@/assets/logos/logo-linkedin.svg?react'
 import SlackLogo    from '@/assets/logos/logo-slack.svg?react'
 import imgBadgeMilestones5        from '@/assets/badges/meta-badge-provider-milestones-5.png'
@@ -371,7 +372,7 @@ export function AllocationBlock({
           {totalHours}h
         </span>
         {hasNonBillable && (
-          <span className="shrink-0 inline-flex items-center justify-center rounded-sm bg-accent text-accent-foreground px-1.5 py-0.5 text-xs font-medium leading-4">
+          <span className={`${PERSON_BADGE_PILL} ${PERSON_BADGE_STYLE.NB}`}>
             NB
           </span>
         )}
@@ -392,7 +393,8 @@ export function AllocationBlock({
 
 export interface AllocationTooltipRow {
   projectName:  string
-  hoursPerWeek: number
+  /** Omitted when the source bar carries no hours (renders as "–"). */
+  hoursPerWeek?: number
   startDate:    string
   endDate:      string
   nonBillable?: boolean
@@ -405,25 +407,27 @@ export interface AllocationTooltipRow {
 export function AllocationTooltip({ allocs }: { allocs: AllocationTooltipRow[] }) {
   return (
     <div className="rounded-lg overflow-hidden shadow-xl" style={{ backgroundColor: '#1e2939', minWidth: 320 }}>
+      {/* Auto-sized hour columns so each title sits exactly over its column
+          content — a fixed 56px column let the CONTRACT title bleed into DATES. */}
       <div
         className="grid px-4 text-white"
-        style={{ gridTemplateColumns: '1fr 56px 56px auto' }}
+        style={{ gridTemplateColumns: '1fr auto auto auto' }}
       >
-        <span className="pt-3 pb-2 text-[10px] font-semibold tracking-wider opacity-50 pr-4">ACCOUNT</span>
-        <span className="pt-3 pb-2 text-[10px] font-semibold tracking-wider opacity-50 text-right pr-4">WORKING</span>
-        <span className="pt-3 pb-2 text-[10px] font-semibold tracking-wider opacity-50 text-right pr-4">CONTRACT</span>
-        <span className="pt-3 pb-2 text-[10px] font-semibold tracking-wider opacity-50">DATES</span>
+        <span className="pt-3 pb-1 text-[10px] font-semibold tracking-wider opacity-50 pr-4">ACCOUNT</span>
+        <span className="pt-3 pb-1 text-[10px] font-semibold tracking-wider opacity-50 text-right pr-4">WORKING</span>
+        <span className="pt-3 pb-1 text-[10px] font-semibold tracking-wider opacity-50 text-right pr-4">CONTRACT</span>
+        <span className="pt-3 pb-1 text-[10px] font-semibold tracking-wider opacity-50">DATES</span>
         {allocs.map((a, ai) => (
           <Fragment key={ai}>
-            <span className="py-2 text-[13px] font-medium truncate pr-4 border-t border-white/10">
+            <span className="py-1.5 text-[13px] font-medium truncate pr-4">
               {a.projectName}
               {a.nonBillable && (
-                <span className="ml-1.5 text-xs font-medium bg-badge-blue border border-badge-blue-stroke text-badge-blue-fg rounded-sm px-1.5 py-0.5 align-middle">NB</span>
+                <span className={`${PERSON_BADGE_PILL} ${PERSON_BADGE_STYLE.NB} ml-1.5 align-middle`}>NB</span>
               )}
             </span>
-            <span className="py-2 text-[13px] text-right text-white/80 border-t border-white/10 pr-4">{a.hoursPerWeek}h</span>
-            <span className="py-2 text-[13px] text-right text-white/80 border-t border-white/10 pr-4">{a.hoursPerWeek}h</span>
-            <span className="py-2 text-[13px] text-white/80 whitespace-nowrap border-t border-white/10">
+            <span className="py-1.5 text-[13px] text-right text-white/80 pr-4">{a.hoursPerWeek != null ? `${a.hoursPerWeek}h` : '–'}</span>
+            <span className="py-1.5 text-[13px] text-right text-white/80 pr-4">{a.hoursPerWeek != null ? `${a.hoursPerWeek}h` : '–'}</span>
+            <span className="py-1.5 text-[13px] text-white/80 whitespace-nowrap">
               {fmtTooltipDate(a.startDate)} – {fmtTooltipDate(a.endDate)}
             </span>
           </Fragment>
@@ -582,7 +586,7 @@ export function AllocRow({
         {fmtAllocDate(row.startDate)} – {fmtAllocDate(row.endDate)}
       </p>
       {row.nonBillable && (
-        <span className="shrink-0 inline-flex items-center justify-center rounded-sm bg-badge-blue border border-badge-blue-stroke text-badge-blue-fg px-1.5 py-0.5 text-xs font-medium leading-4">
+        <span className={`${PERSON_BADGE_PILL} ${PERSON_BADGE_STYLE.NB}`}>
           NB
         </span>
       )}
@@ -1593,7 +1597,7 @@ export default function PeoplePage() {
                           {slot.totalHours}h
                         </span>
                         {slot.hasNonBillable && (
-                          <span className="shrink-0 inline-flex items-center justify-center rounded-sm bg-accent text-accent-foreground px-1.5 py-0.5 text-xs font-medium leading-4">
+                          <span className={`${PERSON_BADGE_PILL} ${PERSON_BADGE_STYLE.NB}`}>
                             NB
                           </span>
                         )}
@@ -1626,39 +1630,15 @@ export default function PeoplePage() {
                         }}
                         className="p-0 bg-transparent border-0 shadow-none"
                       >
-                        <div className="rounded-lg overflow-hidden shadow-xl" style={{ backgroundColor: '#1e2939', minWidth: 320 }}>
-                          {/* Single grid spanning header + all data rows so every column
-                              shares the same computed width — fixes misalignment caused
-                              by independent `auto` column sizing per-row. */}
-                          <div
-                            className="grid px-4 text-white"
-                            style={{ gridTemplateColumns: '1fr 56px 56px auto' }}
-                          >
-                            {/* Header cells */}
-                            <span className="pt-3 pb-2 text-[10px] font-semibold tracking-wider opacity-50 pr-4">ACCOUNT</span>
-                            <span className="pt-3 pb-2 text-[10px] font-semibold tracking-wider opacity-50 text-right pr-4">WORKING</span>
-                            <span className="pt-3 pb-2 text-[10px] font-semibold tracking-wider opacity-50 text-right pr-4">CONTRACT</span>
-                            <span className="pt-3 pb-2 text-[10px] font-semibold tracking-wider opacity-50">DATES</span>
-                            {/* Data cells — 4 per allocation, all in the same grid */}
-                            {slot.allocs.map((a, ai) => {
-                              const projName = PROJECT_MAP.get(a.projectId)?.name ?? a.projectId
-                              return (
-                                <Fragment key={ai}>
-                                  <span className="py-2 text-[13px] font-medium truncate pr-4 border-t border-white/10">
-                                    {projName}
-                                    {a.nonBillable && <span className="ml-1.5 text-xs font-medium bg-badge-blue border border-badge-blue-stroke text-badge-blue-fg rounded-sm px-1.5 py-0.5 align-middle">NB</span>}
-                                  </span>
-                                  <span className="py-2 text-[13px] text-right text-white/80 border-t border-white/10 pr-4">{a.hoursPerWeek}h</span>
-                                  <span className="py-2 text-[13px] text-right text-white/80 border-t border-white/10 pr-4">{a.hoursPerWeek}h</span>
-                                  <span className="py-2 text-[13px] text-white/80 whitespace-nowrap border-t border-white/10">
-                                    {fmtTooltipDate(a.startDate)} – {fmtTooltipDate(a.endDate)}
-                                  </span>
-                                </Fragment>
-                              )
-                            })}
-                          </div>
-                          <div className="h-2" />
-                        </div>
+                        <AllocationTooltip
+                          allocs={slot.allocs.map((a) => ({
+                            projectName: PROJECT_MAP.get(a.projectId)?.name ?? a.projectId,
+                            hoursPerWeek: a.hoursPerWeek,
+                            startDate: a.startDate,
+                            endDate: a.endDate,
+                            nonBillable: a.nonBillable,
+                          }))}
+                        />
                       </TooltipContent>
                     )
 

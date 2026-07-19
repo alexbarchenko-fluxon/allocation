@@ -1,17 +1,14 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { DraftingCompass, Search, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
+import { DraftingCompass, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Trash2, Check, Info } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
-import { FilterMultiSelect } from '@/components/ui/filter-multiselect'
 import { DateField } from './DateField'
-import { TimelineMonths, TimelineLane, type TimelineBarData, type Period } from './AllocationTimeline'
-import { buildWindow } from './timeline-scale'
+import { TimelineMonths, TimelineMarkers, TimelineLane, type TimelineBarData, type Period } from './AllocationTimeline'
+import { buildWindow, addDaysISO, makeScale } from './timeline-scale'
 import { useTrackWidth } from './useTrackWidth'
-import { fmtDate, weeksBetween } from './format'
-import { MODAL_CANDIDATES, CANDIDATE_PERSON_MAP, type Seat, type CandidateTagTone, type ModalCandidate } from './data'
+import { fmtDate, weeksBetween, daysBetween } from './format'
+import { MODAL_CANDIDATES, CANDIDATE_PERSON_MAP, PERSON_BADGE_PILL, PERSON_BADGE_STYLE, type Seat, type DashProject, type ModalCandidate, type CandidateBar } from './data'
 import { NewAllocationDialog } from './NewAllocationDialog'
 import { DeleteConfirmDialog } from './DeleteConfirmDialog'
 import { PersonDetailsSidePanel } from '@/pages/PeoplePage'
@@ -20,62 +17,186 @@ import { cn } from '@/lib/utils'
 
 const LEFT = 'w-[380px] shrink-0'
 
-const TECH_SCOPE_OPTIONS = [
-  { value: 'fullstack', label: 'Full Stack' },
-  { value: 'frontend', label: 'Front End' },
-  { value: 'backend', label: 'Back End' },
-]
-
 type CandStatus = 'proposed' | 'assigned'
 
-const TAG_VARIANT: Record<CandidateTagTone, string> = {
-  success: 'bg-badge-success border-badge-success-stroke text-badge-success-fg',
-  dark: 'bg-[#111827] border-transparent text-white',
-  orange: 'bg-badge-warning border-badge-warning-stroke text-badge-warning-fg',
-  neutral: 'bg-badge-neutral border-badge-neutral-stroke text-badge-neutral-fg',
-  blue: 'bg-[#e7ebff] border-transparent text-[#0e35ff]',
-  // Canonical PA (pending approval) pill — Figma: #d1d5db bg, #111827 text.
-  gray: 'bg-[#d1d5db] border-transparent text-[#111827] dark:bg-[#4b5563] dark:text-white',
+// The default requested hours in the modal filter. The hero seat is 40h/week,
+// but a 20h request is the demo scenario the candidate data is modelled around.
+const DEFAULT_REQ_HOURS = 20
+
+// ── Availability math ─────────────────────────────────────────────────────────
+// Only confirmed commitments reduce free hours; TA (tentative) projects,
+// PA (proposed) allocations, OOO and flags do NOT.
+const reducesHours = (b: CandidateBar) =>
+  b.hours != null &&
+  (b.tone === 'assigned' || b.tone === 'available') &&
+  !b.badges?.some((x) => x.label === 'TA')
+
+interface CandStats {
+  /** Lowest free hours/week anywhere in the requested range. */
+  freeHours: number
+  /** Weeks within the range where free hours fall below the request (0 = fits). */
+  conflictWeeks: number
+  ooo: boolean
 }
 
-function HoursField({ hours }: { hours: number }) {
-  return (
-    <span className="flex h-9 w-[72px] items-center rounded-md border border-input bg-[var(--input-bg)] px-2.5 text-sm text-foreground shadow-sm">
-      {hours}h
-    </span>
-  )
+// Day sweep across the requested period: free = capacity − confirmed committed
+// hours that day. The badge shows the worst (minimum) free hours; every day
+// below the requested hours counts toward the conflict weeks.
+function candStats(c: ModalCandidate, period: Period, reqHours: number): CandStats {
+  let free = c.capacity
+  let conflictDays = 0
+  for (let d = period.startDate; d <= period.endDate; d = addDaysISO(d, 1)) {
+    const committed = c.bars.reduce(
+      (n, b) => (reducesHours(b) && b.startDate <= d && d <= b.endDate ? n + (b.hours ?? 0) : n), 0)
+    const f = Math.max(0, c.capacity - committed)
+    if (f < free) free = f
+    if (f < reqHours) conflictDays++
+  }
+  // OOO only raises the tag when the time off lands on the *first week* of the
+  // allocation — that's its most disruptive point (the person is out as the seat
+  // kicks off). Time off buried later in the window doesn't flag. First week =
+  // the first 7 days of the period, clamped to the end for sub-week windows.
+  const firstWeekEnd = minISO(addDaysISO(period.startDate, 6), period.endDate)
+  return {
+    freeHours: free,
+    conflictWeeks: conflictDays === 0 ? 0 : Math.max(1, Math.round(conflictDays / 7)),
+    ooo: c.bars.some(
+      (b) => b.tone === 'ooo' && b.startDate <= firstWeekEnd && b.endDate >= period.startDate,
+    ),
+  }
+}
+
+// Candidate ordering for the list:
+//   exact hours match → more free hours than requested → has time off → has conflicts.
+// Time off and conflicts trump the hours comparison; when conflict-free, free
+// hours are always ≥ requested, so "not exact" means "more than requested".
+const candRank = (s: CandStats, reqHours: number): number => {
+  if (s.conflictWeeks > 0) return 3  // has conflicts (last)
+  if (s.ooo) return 2                // has time off
+  return s.freeHours === reqHours ? 0 : 1
 }
 
 const CAND_MAP = new Map(MODAL_CANDIDATES.map((c) => [c.id, c]))
 
+// Plan entries are keyed by a unique instance id ("candId#n") rather than by the
+// candidate id, so one person can hold several non-crossing slots in the same
+// seat (e.g. Jun–Jul, then Jul–Nov). candIdOf recovers the underlying candidate.
+const candIdOf = (planId: string) => planId.split('#')[0]
+
+const maxISO = (a: string, b: string) => (a > b ? a : b)
+const minISO = (a: string, b: string) => (a < b ? a : b)
+
+// Two windows cross when they share more than a shared endpoint — adjacent
+// periods that merely touch (Jul 15 – Jul 15) do NOT cross.
+const crosses = (a: Period, b: Period) =>
+  a.startDate < b.endDate && b.startDate < a.endDate
+
+// One row per person (Figma 4774-52144): project bars that overlap in time are
+// merged into a single segmented bar ("20h Allox · 20h Spark") instead of being
+// stacked on parallel rows. OOO / flag bars stay separate (they never stack in
+// the mock data, so the row still reads as a single lane).
+function toRowBars(bars: ModalCandidate['bars']): TimelineBarData[] {
+  const isProject = (b: ModalCandidate['bars'][number]) => b.tone !== 'ooo' && b.tone !== 'flag'
+  const projects = bars.filter(isProject).sort((a, b) => a.startDate.localeCompare(b.startDate))
+  const others = bars.filter((b) => !isProject(b)) as unknown as TimelineBarData[]
+  const groups: (typeof projects)[] = []
+  let groupEnd = ''
+  for (const b of projects) {
+    const g = groups[groups.length - 1]
+    if (g && b.startDate <= groupEnd) { g.push(b); if (b.endDate > groupEnd) groupEnd = b.endDate }
+    else { groups.push([b]); groupEnd = b.endDate }
+  }
+  const merged: TimelineBarData[] = groups.map((g) => ({
+    id: g.map((x) => x.id).join('+'),
+    startDate: g.reduce((m, x) => (x.startDate < m ? x.startDate : m), g[0].startDate),
+    endDate: g.reduce((m, x) => (x.endDate > m ? x.endDate : m), g[0].endDate),
+    segments: g.map((x) => ({ hours: x.hours, label: x.label ?? '', startDate: x.startDate, endDate: x.endDate })),
+    tone: g.some((x) => x.tone === 'proposed') ? 'proposed' : 'available',
+    badges: g.flatMap((x) => x.badges ?? []).filter((b, i, a) => a.findIndex((y) => y.label === b.label) === i),
+  }))
+  return [...merged, ...others]
+}
+
+// The only three user badges a candidate row can show (Figma 4397-30884).
+// A person who can cover the requested hours gets the green "• Nh" free-hours
+// pill (plus gray "OOO" when they're out during the allocation's first week);
+// one who can't gets ONLY the red "Nw conflict" pill.
+function UserBadges({ s }: { s: CandStats }) {
+  if (s.conflictWeeks > 0) {
+    return (
+      <span className="rounded-full border border-badge-error-stroke bg-badge-error px-2 py-0.5 text-xs font-medium text-badge-error-fg">
+        {s.conflictWeeks}w conflict
+      </span>
+    )
+  }
+  return (
+    <span className="flex items-center gap-1">
+      <span className="flex items-center rounded-full border border-badge-success-stroke bg-badge-success py-0.5 pl-1 pr-2 text-xs font-medium text-badge-success-fg">
+        <span className="flex size-3 items-center justify-center">
+          <span className="size-1 rounded-full bg-current" />
+        </span>
+        {s.freeHours}h
+      </span>
+      {s.ooo && (
+        <span className="rounded-full bg-[var(--timeline-assigned-stroke)] px-2 py-0.5 text-xs font-medium text-[var(--timeline-assigned-fg)]">
+          OOO
+        </span>
+      )}
+    </span>
+  )
+}
+
 export function AllocationModal({
-  open, onOpenChange, seat,
+  open, onOpenChange, seat, project,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   seat: Seat
+  project?: DashProject | null
 }) {
   const { ref, width } = useTrackWidth()
   const [query, setQuery] = useState('')
-  const [techScope, setTechScope] = useState<string[]>([])
-  const [fullSpanOnly, setFullSpanOnly] = useState(false)
-  const [excludeNewJoiners, setExcludeNewJoiners] = useState(false)
   const [shift, setShift] = useState(0)
-  const win = useMemo(() => buildWindow(shift), [shift])
+  const win = useMemo(
+    () => buildWindow({ startDate: seat.startDate, endDate: seat.endDate }, shift),
+    [seat.startDate, seat.endDate, shift],
+  )
+
+  // Allocation period — starts equal to the seat window. Editing the date range
+  // (or dragging the empty plan bar) reshapes the gray "period box" that runs
+  // across every candidate row.
+  const [allocPeriod, setAllocPeriod] = useState<Period>({ startDate: seat.startDate, endDate: seat.endDate })
+  // Requested hours/week — the editable hours filter. Availability badges are
+  // computed against this: free ≥ requested → green pill, less → conflict.
+  const [reqHours, setReqHours] = useState(DEFAULT_REQ_HOURS)
 
   // ── Allocation flow state ────────────────────────────────────────────────────
   const [status, setStatus] = useState<Record<string, CandStatus>>({})
-  const [order, setOrder] = useState<string[]>([])            // allocated ids, most-recent first
+  const [order, setOrder] = useState<string[]>([])            // plan ids, most-recent first
   const [ranges, setRanges] = useState<Record<string, Period>>({})
+  // The candidate currently picked in the list (drives the footer). Single-select.
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Whether the allocation plan is expanded to show each person's own schedule.
+  const [planOpen, setPlanOpen] = useState(false)
   // Which candidate's profile is shown in the split-view side panel (null = closed).
   const [profileCandId, setProfileCandId] = useState<string | null>(null)
   // Candidate awaiting the "New Allocation" confirmation (null = dialog closed).
   const [confirmCand, setConfirmCand] = useState<ModalCandidate | null>(null)
-  // Assigned candidate awaiting the "Delete Allocation" confirmation.
-  const [removeCandId, setRemoveCandId] = useState<string | null>(null)
-  // Fresh flow each time the modal opens (state 1 — no current allocation).
+  // Plan entry (instance id) awaiting the "Delete Allocation" confirmation.
+  const [removePlanId, setRemovePlanId] = useState<string | null>(null)
+  // Monotonic counter minting unique plan-entry ids ("candId#n").
+  const planSeq = useRef(0)
+
+  // Fresh flow each time the modal opens (empty allocation plan).
   useEffect(() => {
-    if (open) { setStatus({}); setOrder([]); setRanges({}); setQuery(''); setTechScope([]); setShift(0); setActiveSection('current'); setProfileCandId(null); setConfirmCand(null); setRemoveCandId(null) }
+    if (open) {
+      setStatus({}); setOrder([]); setRanges({}); setQuery(''); setShift(0)
+      setSelectedId(null); setPlanOpen(false); setProfileCandId(null)
+      setConfirmCand(null); setRemovePlanId(null); planSeq.current = 0
+      setAllocPeriod({ startDate: seat.startDate, endDate: seat.endDate })
+      setReqHours(DEFAULT_REQ_HOURS)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   // Resolve the profile-panel person from the clicked candidate (prototype mapping).
@@ -83,286 +204,532 @@ export function AllocationModal({
     ? (PERSON_MAP.get(CANDIDATE_PERSON_MAP[profileCandId] ?? '') ?? MOCK_PEOPLE[0])
     : null
 
+  // Seat span → blue band (fixed reference). Allocation span → gray dashed band.
   const projectPeriod: Period = { startDate: seat.startDate, endDate: seat.endDate }
-  const setPeriod: Period = { startDate: seat.startDate, endDate: seat.endDate }
-  const rangeFor = (id: string): Period => ranges[id] ?? { startDate: seat.startDate, endDate: seat.endDate }
+  const setPeriod: Period = allocPeriod
+  // The project runs a while past the seat's own window — marks the "project ends" line.
+  const projectEndDate = addDaysISO(seat.endDate, 35)
+  const rangeFor = (id: string): Period => ranges[id] ?? allocPeriod
+  // "Today" sits a week before the range start, so the marker reads just ahead of
+  // the allocation window rather than buried inside it.
+  const today = addDaysISO(seat.startDate, -7)
 
   const shiftPrev = () => setShift((s) => Math.max(-6, s - 1))
   const shiftNext = () => setShift((s) => Math.min(6, s + 1))
 
-  // Actions
-  const propose = (id: string) => { setStatus((s) => ({ ...s, [id]: 'proposed' })); setOrder((o) => [id, ...o.filter((x) => x !== id)]) }
-  const assign = (id: string) => { setStatus((s) => ({ ...s, [id]: 'assigned' })); setOrder((o) => [id, ...o.filter((x) => x !== id)]) }
-  const reject = (id: string) => { setStatus((s) => { const n = { ...s }; delete n[id]; return n }); setOrder((o) => o.filter((x) => x !== id)) }
+  // Plan ids (in the order they were added, newest first).
+  const planIds = order.filter((id) => status[id])
+  const hasPlan = planIds.length > 0
+  // Chronological order (by start) — how the hand-off reads on the timeline.
+  const planSorted = [...planIds].sort((a, b) => rangeFor(a).startDate.localeCompare(rangeFor(b).startDate))
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+  // Committing snapshots a range for the new plan entry, laid out as a sequential
+  // hand-off (a relay, not a stack): the first person takes the whole window; the
+  // second splits it — the outgoing person rolls off at the hand-off point and the
+  // newcomer picks up the tail; a third+ appends after the latest end.
+  const allocate = (candId: string, st: CandStatus) => {
+    const existing = planIds
+    // Fresh instance id so the same person can hold more than one slot.
+    const id = `${candId}#${planSeq.current++}`
+    setStatus((s) => ({ ...s, [id]: st }))
+    setOrder((o) => [id, ...o])
+    setRanges((r) => {
+      if (existing.length === 0) return { ...r, [id]: allocPeriod }
+      if (existing.length === 1) {
+        const prev = existing[0]
+        const prevRange = r[prev] ?? allocPeriod
+        // Retargeted window (e.g. a clicked open spot) that doesn't overlap the
+        // sitting person: the newcomer just takes the window — no hand-off split.
+        if (allocPeriod.endDate <= prevRange.startDate || allocPeriod.startDate >= prevRange.endDate)
+          return { ...r, [id]: allocPeriod }
+        const total = daysBetween(allocPeriod.startDate, allocPeriod.endDate)
+        const handoff = addDaysISO(allocPeriod.startDate, Math.max(7, Math.round(total / 2)))
+        if (handoff >= allocPeriod.endDate) return { ...r, [id]: allocPeriod }
+        return {
+          ...r,
+          [prev]: { startDate: prevRange.startDate, endDate: handoff },
+          [id]: { startDate: handoff, endDate: allocPeriod.endDate },
+        }
+      }
+      const latestEnd = existing.reduce((m, x) => maxISO(m, (r[x] ?? allocPeriod).endDate), allocPeriod.startDate)
+      const start = latestEnd < allocPeriod.endDate ? latestEnd : allocPeriod.startDate
+      return { ...r, [id]: { startDate: start, endDate: allocPeriod.endDate } }
+    })
+    setSelectedId(null)
+  }
+  const propose = (id: string) => allocate(id, 'proposed')
+  const assign = (id: string) => allocate(id, 'assigned')
+  const remove = (id: string) => {
+    setStatus((s) => { const n = { ...s }; delete n[id]; return n })
+    setOrder((o) => o.filter((x) => x !== id))
+    setRanges((r) => { const n = { ...r }; delete n[id]; return n })
+  }
   const onBarChange = (id: string, next: Period) => setRanges((r) => ({ ...r, [id]: next }))
 
-  // Current Allocation lane bars (proposed = orange + PA, assigned = blue).
-  const allocatedIds = order.filter((id) => status[id])
-  const hasCurrent = allocatedIds.length > 0
-  // Person-weeks summed across the current allocations, out of the seat total.
-  const allocatedWeeks = allocatedIds.reduce((sum, id) => {
-    const r = rangeFor(id)
-    return sum + weeksBetween(r.startDate, r.endDate)
-  }, 0)
-  const currentBars: TimelineBarData[] = allocatedIds.map((id) => {
-    const c = CAND_MAP.get(id)!
+  // The active assigned entry = earliest-starting one that hasn't ended. Reads as
+  // "current" (blue) even when today is just before it (Figma 4397-40124).
+  const currentAssignedId = planIds
+    .filter((id) => status[id] === 'assigned' && rangeFor(id).endDate >= today)
+    .sort((a, b) => rangeFor(a).startDate.localeCompare(rangeFor(b).startDate))[0]
+
+  const toneFor = (id: string): TimelineBarData['tone'] => {
     const st = status[id]
     const r = rangeFor(id)
-    // Does the proposed range clash with any of this person's existing commitments?
-    const overlaps = (b: { startDate: string; endDate: string }) =>
-      Math.min(+new Date(r.endDate), +new Date(b.endDate)) > Math.max(+new Date(r.startDate), +new Date(b.startDate))
-    const hasConflict = c.bars.some((b) => b.tone !== 'flag' && overlaps(b))
+    if (st === 'assigned') {
+      if (r.endDate < today) return 'past'
+      return id === currentAssignedId ? 'current' : 'nextAssigned'
+    }
+    // Proposed allocations always read purple (Figma 4774-51024); a scheduling
+    // clash is surfaced by the overlap hatch + tooltip, not by the bar colour.
+    return 'proposed'
+  }
+
+  // Plan-lane bars — one per plan person, at their recorded range.
+  const planBars: TimelineBarData[] = planIds.map((id) => {
+    const c = CAND_MAP.get(candIdOf(id))!
+    const st = status[id]
+    const r = rangeFor(id)
     return {
       id, startDate: r.startDate, endDate: r.endDate, label: c.name,
-      // Assigned → blue. Proposed → grey PA bar, but turns orange when it clashes
-      // with an existing commitment (a conflicting proposal). PA pill stays grey.
-      tone: st === 'assigned' ? 'primary' : hasConflict ? 'misalloc' : 'proposed',
+      tone: toneFor(id),
       badges: st === 'proposed' ? [{ label: 'PA', tone: 'gray' }] : undefined,
-      // The person's existing commitments — the tooltip flags any that overlap.
       conflicts: c.bars
         .filter((b) => b.tone !== 'flag')
         .map((b) => ({
           label: b.tone === 'ooo' ? 'Time-Off' : b.label ?? 'Project',
           startDate: b.startDate,
           endDate: b.endDate,
-          // Tentative allocations are marked "(TA)" after the dates.
           note: b.badges?.some((x) => x.label === 'TA') ? 'TA' : undefined,
         })),
       avatar: c.avatar, draggable: true,
     }
   })
-
-  // List: allocated (proposed/assigned) first in action order, then the rest.
-  const q = query.toLowerCase()
-  const listed = useMemo(() => {
-    const scopeOk = (c: ModalCandidate | undefined) =>
-      !!c && (techScope.length === 0 || techScope.includes(c.scope))
-    const match = (id: string) => {
-      const c = CAND_MAP.get(id)
-      return !!c && c.name.toLowerCase().includes(q) && scopeOk(c)
+  // Empty-state: a single dashed box spanning the allocation window, draggable to
+  // reshape the period (which reshapes the gray band across candidates).
+  const emptyBar: TimelineBarData = {
+    id: 'alloc-empty', startDate: allocPeriod.startDate, endDate: allocPeriod.endDate,
+    tone: 'empty', draggable: true,
+  }
+  // Seat time the plan bars leave uncovered — each gap draws a light-blue dashed
+  // box in the plan lane (Figma 4774-50251), so a partial plan still shows the
+  // rest of the seat window as open.
+  const seatRest: Period[] = (() => {
+    const rest: Period[] = []
+    let cursor = projectPeriod.startDate
+    for (const id of planSorted) {
+      const r = rangeFor(id)
+      const gapEnd = minISO(r.startDate, projectPeriod.endDate)
+      if (gapEnd > cursor) rest.push({ startDate: cursor, endDate: gapEnd })
+      cursor = maxISO(cursor, r.endDate)
     }
-    const alloc = allocatedIds.filter(match).map((id) => CAND_MAP.get(id)!)
-    const rest = MODAL_CANDIDATES.filter((c) => !status[c.id] && c.name.toLowerCase().includes(q) && scopeOk(c))
-    return [...alloc, ...rest]
+    if (cursor < projectPeriod.endDate) rest.push({ startDate: cursor, endDate: projectPeriod.endDate })
+    return rest
+  })()
+
+  // Per-candidate availability vs the requested hours + period (drives badges,
+  // conflict tinting and list order).
+  const stats = useMemo(
+    () => new Map(MODAL_CANDIDATES.map((c) => [c.id, candStats(c, allocPeriod, reqHours)])),
+    [allocPeriod, reqHours],
+  )
+  const statsFor = (id: string): CandStats => stats.get(id)!
+
+  // Candidate list — most available first. A person already in the plan stays
+  // listed (and bookable again) as long as none of their slots cross the current
+  // allocation window; a slot that crosses it hides them for that window.
+  const q = query.toLowerCase()
+  const listed = useMemo(
+    () => MODAL_CANDIDATES
+      .filter((c) => {
+        if (!c.name.toLowerCase().includes(q)) return false
+        const booked = planIds.some(
+          (pid) => candIdOf(pid) === c.id && crosses(rangeFor(pid), allocPeriod),
+        )
+        return !booked
+      })
+      .sort((a, b) => candRank(statsFor(a.id), reqHours) - candRank(statsFor(b.id), reqHours)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, techScope, order, status])
+    [q, order, status, ranges, allocPeriod, stats, reqHours],
+  )
 
   const CONTROLS_H = 44
+  // Plan-lane height — the bar centres in this, with the day caps overlaid at top.
+  // 96px matches the allocation-plan section in Figma.
+  const PLAN_H = 96
 
-  // The single timeline control is pinned; its section label follows scroll:
-  // once the New Allocations filters reach the top, the label swaps.
-  const bodyRef = useRef<HTMLDivElement>(null)
-  const newTitleRef = useRef<HTMLDivElement>(null)
-  const [activeSection, setActiveSection] = useState<'current' | 'new'>('current')
-  const onScroll = () => {
-    const body = bodyRef.current, t = newTitleRef.current
-    if (!body || !t) return
-    // Flip once the New Allocations title tucks up behind the pinned control.
-    setActiveSection(body.scrollTop + CONTROLS_H >= t.offsetTop - 1 ? 'new' : 'current')
+  const selectedCand = selectedId ? CAND_MAP.get(selectedId) ?? null : null
+
+  // ── Overlap guard (Figma 4682-41796) ─────────────────────────────────────────
+  // A new person can't take a window that crosses someone already holding the
+  // seat — allocations on one seat never overlap. When the allocation period
+  // crosses any existing plan allocation, Propose/Assign are disabled and the
+  // footer explains the way out: shrink/move the date range to a free slot, or
+  // remove the crossing allocation.
+  const crossesPlan = planIds.some((id) => crosses(rangeFor(id), allocPeriod))
+
+  // ── Plan summary (left column of the allocation-plan section) ────────────────
+  const PlanSummary = () => {
+    if (!hasPlan) {
+      return (
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/40" />
+          <div className="min-w-0">
+            <p className="text-base font-medium text-foreground">No Allocation</p>
+            <p className="text-xs text-muted-foreground">
+              Since {fmtDate(allocPeriod.startDate)} · {weeksBetween(allocPeriod.startDate, allocPeriod.endDate)}w
+            </p>
+          </div>
+        </div>
+      )
+    }
+    const multi = planSorted.length > 1
+    const nameOf = (id: string) => CAND_MAP.get(candIdOf(id))!.name
+    const names = planSorted.map((id) => nameOf(id).replace(/\s+\w\.$/, '').trim() || nameOf(id))
+    const first = planSorted[0]
+    const r0 = rangeFor(first)
+    return (
+      <div className="flex items-center gap-3">
+        {multi ? (
+          <div className="flex shrink-0 -space-x-2">
+            {planSorted.slice(0, 3).map((id) => (
+              // Neutral background ring only — separates the overlapping stack; no
+              // status colour on the avatars themselves (Figma 4774-51024).
+              <img key={id} src={CAND_MAP.get(candIdOf(id))!.avatar} alt="" className="size-9 rounded-full object-cover ring-2 ring-background" />
+            ))}
+          </div>
+        ) : (
+          <img src={CAND_MAP.get(candIdOf(first))!.avatar} alt="" className="size-10 shrink-0 rounded-full object-cover" />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5 truncate text-base font-medium text-foreground">
+            {multi ? (
+              names.map((n, i) => (
+                <span key={i} className="flex items-center gap-1.5">
+                  {i > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                  {n}
+                </span>
+              ))
+            ) : (
+              CAND_MAP.get(candIdOf(first))!.name
+            )}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {multi
+              ? `Upcoming change ${fmtDate(rangeFor(planSorted[1]).startDate)}`
+              : `${fmtDate(r0.startDate)} – ${fmtDate(r0.endDate)}`}
+          </p>
+        </div>
+        {/* Expand/collapse only makes sense with a hand-off (2+ people); a single
+            person is already fully named here, so no dropdown (Figma 4668-31373). */}
+        {multi && (
+          <button
+            type="button"
+            onClick={() => setPlanOpen((v) => !v)}
+            aria-label={planOpen ? 'Collapse plan' : 'Expand plan'}
+            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition-colors hover:bg-accent"
+          >
+            {planOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // One expanded plan person — their own schedule, mirroring a candidate row.
+  // Only rendered for a multi-person hand-off, so each row names its own person
+  // in the left column (Figma 4751-177821).
+  const PlanPersonRow = ({ id, showUser }: { id: string; showUser: boolean }) => {
+    const c = CAND_MAP.get(candIdOf(id))!
+    return (
+      <div className="group relative flex items-stretch border-t border-border">
+        <div className={cn(LEFT, 'flex items-center gap-3 px-6 py-3')}>
+          {showUser && (
+            <>
+              <img src={c.avatar} alt="" className="size-9 shrink-0 rounded-full object-cover" />
+              <div className="min-w-0">
+                <p className="truncate text-base leading-[22px] text-foreground">{c.name}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{c.role}</p>
+              </div>
+            </>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          {/* The blue dashed box spans THIS person's own slot in the plan (not the
+              whole allocation window), so it lines up with their bar in the summary
+              above (Figma 4751-173774). */}
+          <TimelineLane
+            width={width} win={win} bars={toRowBars(c.bars)} height={64}
+            today={today} projectPeriod={projectPeriod} setPeriod={rangeFor(id)} projectEndDate={projectEndDate}
+            allocBox conflict={statsFor(candIdOf(id)).conflictWeeks > 0}
+            laneClassName="bg-[#f9fafb] dark:bg-[#0f1729]"
+          />
+        </div>
+        {/* Full-row hover highlight — same blue-100 @20% as the candidate rows. */}
+        <div className="pointer-events-none absolute inset-0 bg-[#dbeafe]/20 opacity-0 transition-opacity group-hover:opacity-100 dark:bg-[#1e3a8a]/20" />
+        {/* Remove this person from the plan (on hover). */}
+        <button
+          type="button"
+          onClick={() => setRemovePlanId(id)}
+          title={`Remove ${c.name}`}
+          className="absolute right-6 top-1/2 hidden size-9 -translate-y-1/2 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-extended-hover group-hover:flex"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+    )
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[calc(100vh-40px)] max-h-[900px] w-[calc(100vw-40px)] max-w-[1400px] flex-col gap-0 overflow-hidden p-0">
-        {/* Navbar — spans the full modal width, above the list/profile split. */}
+      <DialogContent className="flex h-[calc(100vh-40px)] max-h-[1040px] w-[calc(100vw-40px)] max-w-[1880px] flex-col gap-0 overflow-hidden p-0">
+        {/* Navbar */}
         <div className="flex h-[64px] flex-shrink-0 items-center gap-3 border-b border-border px-6">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
             <DraftingCompass className="h-5 w-5" />
           </span>
           <DialogTitle className="flex items-center gap-2 text-base font-semibold">
             {seat.role} Seat
+            {project && (
+              <>
+                <span className="text-muted-foreground">·</span>
+                <span className="text-sm font-normal text-foreground">{project.client}</span>
+              </>
+            )}
             <span className="text-muted-foreground">·</span>
             <span className="text-sm font-normal text-foreground">{fmtDate(seat.startDate)} – {fmtDate(seat.endDate)}</span>
             <span className="text-muted-foreground">·</span>
             <span className="text-sm font-normal text-foreground">{seat.hoursPerWeek}h <span className="text-muted-foreground">/week</span></span>
             <span className="text-muted-foreground">·</span>
             <span className="text-sm font-normal text-foreground">{seat.weeks} weeks</span>
-            {!seat.billable && <Badge variant="blue" className="ml-1 text-[10px]">NB</Badge>}
+            {!seat.billable && <span className={cn(PERSON_BADGE_PILL, PERSON_BADGE_STYLE.NB, 'ml-1')}>NB</span>}
           </DialogTitle>
         </div>
 
-        {/* Body: candidate list + profile split, both sitting below the navbar.
-            Muted backdrop so the (white) profile side panel reads as its own card. */}
+        {/* Body: candidate list + profile split. */}
         <div className="flex min-h-0 flex-1 flex-row gap-[10px] bg-muted">
 
-        {/* Scroll body */}
-        <div ref={bodyRef} onScroll={onScroll} className="scrollbar-panel relative min-h-0 min-w-0 flex-1 overflow-y-auto bg-background">
+          {/* Left column — scroll body + (conditional) selection footer. */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
+            <div className="scrollbar-panel relative min-h-0 flex-1 overflow-y-auto">
 
-          {/* Single timeline control (bottom layer) — pinned; the label reflects
-              whichever section is crossing it. Never duplicated. */}
-          <div className="sticky top-0 z-30 flex items-center border-b border-border bg-muted" style={{ height: CONTROLS_H }}>
-            <div className={cn(LEFT, 'px-6')}>
-              <span className="text-sm font-medium text-foreground">{!hasCurrent || activeSection === 'new' ? 'New Allocations' : 'Current Allocation'}</span>
-            </div>
-            <div className="relative min-w-0 flex-1">
-              <div ref={ref} className="w-full pt-1"><TimelineMonths width={width} win={win} /></div>
-              <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1 text-primary">
-                <button type="button" onClick={shiftPrev} className="flex size-6 items-center justify-center rounded bg-muted hover:bg-accent"><ChevronLeft className="h-5 w-5" /></button>
-                <button type="button" onClick={shiftNext} className="flex size-6 items-center justify-center rounded bg-muted hover:bg-accent"><ChevronRight className="h-5 w-5" /></button>
-              </div>
-            </div>
-          </div>
-
-          {/* Current Allocation content — hidden until something is allocated. */}
-          {hasCurrent && (
-            <div className="flex items-stretch border-b border-border">
-              <div className={cn(LEFT, 'flex items-center gap-3 px-6 py-3')}>
-                {allocatedIds.length === 1 ? (
-                  <>
-                    <img src={CAND_MAP.get(allocatedIds[0])!.avatar} alt="" className="size-10 shrink-0 rounded-full object-cover" />
-                    <div className="min-w-0">
-                      <p className="truncate text-base font-medium text-foreground">{CAND_MAP.get(allocatedIds[0])!.name}</p>
-                      <p className="text-xs text-muted-foreground">Allocated {allocatedWeeks}/{seat.weeks}w</p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex shrink-0 -space-x-2">
-                      {allocatedIds.slice(0, 3).map((id) => (
-                        <img key={id} src={CAND_MAP.get(id)!.avatar} alt="" className="size-9 rounded-full object-cover ring-2 ring-background" />
-                      ))}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-base font-medium text-foreground">{allocatedIds.length} people</p>
-                      <p className="text-xs text-muted-foreground">Allocated {allocatedWeeks}/{seat.weeks}w</p>
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <TimelineLane width={width} win={win} bars={currentBars} projectPeriod={projectPeriod} setPeriod={setPeriod} onChange={onBarChange} />
-              </div>
-            </div>
-          )}
-
-          {/* New Allocations title — its own gray bar; tucks behind the control
-              (z below it) as you scroll, so the control's label becomes its title.
-              Skipped when there's no Current section — the pinned control already
-              reads "New Allocations". */}
-          {hasCurrent && (
-            <div ref={newTitleRef} className="sticky top-0 z-10 flex items-center border-b border-border bg-muted px-6" style={{ height: CONTROLS_H }}>
-              <span className="text-sm font-medium text-foreground">New Allocations</span>
-            </div>
-          )}
-
-          {/* New Allocations filters — stick just beneath the timeline control.
-              Layout mirrors Figma "Dashboard / Filters" (4093:16662): search →
-              date range → hours on the left (flex-1); scope select + switches
-              pushed to the far right. */}
-          <div className="sticky z-20 flex flex-wrap items-center gap-3 border-b border-border bg-muted px-6 py-3" style={{ top: CONTROLS_H }}>
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <div className="relative w-[332px] shrink-0">
-                <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search People" className="h-9 pr-8" />
-                <Search className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <DateField iso={seat.startDate} icon={false} className="w-[100px]" />
-                <span className="text-muted-foreground">–</span>
-                <DateField iso={seat.endDate} icon={false} className="w-[100px]" />
-              </div>
-              <HoursField hours={20} />
-            </div>
-            <FilterMultiSelect label="By technical scope" options={TECH_SCOPE_OPTIONS} value={techScope} onChange={setTechScope} className="w-[180px]" />
-            <label className="flex items-center gap-2 text-sm text-foreground">
-              <Switch checked={fullSpanOnly} onCheckedChange={setFullSpanOnly} /> Fits full span only
-            </label>
-            <label className="flex items-center gap-2 text-sm text-foreground">
-              <Switch checked={excludeNewJoiners} onCheckedChange={setExcludeNewJoiners} /> Exclude new joiners
-            </label>
-          </div>
-
-          {/* Candidate list */}
-          {listed.map((c) => {
-            const st = status[c.id]
-            const tinted = !!st
-            const rowBg = st === 'assigned'
-              ? 'bg-[#f0fdf4] dark:bg-[#052e16]'      // green-50
-              : st === 'proposed'
-                ? 'bg-[#f3f4f6] dark:bg-[#1f2937]'    // gray-100
-                : ''
-            return (
-              <div
-                key={c.id}
-                className={cn('group relative flex w-full items-stretch border-b border-border text-left transition-colors', rowBg)}
-              >
-                <div className={cn(LEFT, 'flex items-center gap-3 px-6 py-3')}>
-                  <button
-                    type="button"
-                    onClick={() => setProfileCandId(c.id)}
-                    aria-label={`View ${c.name}'s profile`}
-                    className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <img src={c.avatar} alt="" className="size-10 rounded-full object-cover" />
-                  </button>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setProfileCandId(c.id)}
-                        className="text-base leading-[22px] text-foreground hover:underline focus-visible:underline focus-visible:outline-none"
-                      >
-                        {c.name}
-                      </button>
-                      <span className="rounded-full border border-badge-success-stroke bg-badge-success px-2 py-0.5 text-xs font-medium text-badge-success-fg">{c.hoursLabel}</span>
-                      {c.tags.map((t) => (
-                        <span key={t.label} className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', TAG_VARIANT[t.tone])}>{t.label}</span>
-                      ))}
-                    </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{c.role}</p>
+              {/* Pinned control — section label + month header + pan arrows. */}
+              <div className="sticky top-0 z-30 flex items-center border-b border-border bg-muted" style={{ height: CONTROLS_H }}>
+                <div className={cn(LEFT, 'px-6')}>
+                  <span className="text-sm font-medium text-foreground">Allocation plan</span>
+                </div>
+                <div className="relative min-w-0 flex-1">
+                  <div ref={ref} className="w-full pt-1"><TimelineMonths width={width} win={win} /></div>
+                  <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1 text-primary">
+                    <button type="button" onClick={shiftPrev} className="flex size-6 items-center justify-center rounded bg-muted hover:bg-accent"><ChevronLeft className="h-5 w-5" /></button>
+                    <button type="button" onClick={shiftNext} className="flex size-6 items-center justify-center rounded bg-muted hover:bg-accent"><ChevronRight className="h-5 w-5" /></button>
                   </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <TimelineLane
-                    width={width} win={win} bars={c.bars as TimelineBarData[]} height={64}
-                    projectPeriod={projectPeriod} setPeriod={setPeriod}
-                    laneClassName={tinted ? 'bg-transparent' : 'bg-[#f8fafc] dark:bg-[#0f1729]'}
+              </div>
+
+              {/* Allocation-plan summary row + timeline. The day caps overlay the top
+                  of the lane (rather than sitting in their own row) so the summary
+                  info and the bar stay vertically centred in the plan block. */}
+              <div className="flex items-stretch border-b border-border">
+                <div className={cn(LEFT, 'flex items-center px-6 py-3')}>
+                  <div className="min-w-0 flex-1"><PlanSummary /></div>
+                </div>
+                <div className="relative min-w-0 flex-1">
+                  {hasPlan ? (
+                    <TimelineLane width={width} win={win} bars={planBars} height={PLAN_H} today={today} projectPeriod={projectPeriod} setPeriod={setPeriod} projectEndDate={projectEndDate} restPeriods={seatRest} onRestClick={setAllocPeriod} onChange={onBarChange} />
+                  ) : (
+                    <TimelineLane width={width} win={win} bars={[emptyBar]} height={PLAN_H} today={today} projectPeriod={projectPeriod} projectEndDate={projectEndDate} onChange={(_, next) => setAllocPeriod(next)} />
+                  )}
+                  <div className="pointer-events-none absolute inset-x-0 top-0">
+                    <TimelineMarkers capsOnly width={width} win={win} today={today} projectPeriod={projectPeriod} setPeriod={setPeriod} projectEndDate={projectEndDate} showSetCaps={false} height={20} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Expanded plan — each person's own schedule. Only ever shown for a
+                  multi-person hand-off; a single person needs no expandable view. */}
+              {hasPlan && planOpen && planSorted.length > 1 && (
+                <div className="border-b border-border">
+                  {planSorted.map((id) => <PlanPersonRow key={id} id={id} showUser />)}
+                </div>
+              )}
+
+              {/* Filter row — search + date range + hours. Sticks below the control. */}
+              <div className="sticky z-20 flex items-center gap-3 border-b border-border bg-muted px-6 py-3" style={{ top: CONTROLS_H }}>
+                <div className="relative w-[332px] shrink-0">
+                  <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search Candidates" className="h-9 pr-8" />
+                  <Search className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <DateField
+                    iso={allocPeriod.startDate}
+                    icon={false}
+                    className="w-[100px]"
+                    onChange={(iso) => setAllocPeriod((p) => ({ startDate: iso, endDate: iso > p.endDate ? iso : p.endDate }))}
+                  />
+                  <span className="text-muted-foreground">–</span>
+                  <DateField
+                    iso={allocPeriod.endDate}
+                    icon={false}
+                    className="w-[100px]"
+                    onChange={(iso) => setAllocPeriod((p) => ({ startDate: iso < p.startDate ? iso : p.startDate, endDate: iso }))}
                   />
                 </div>
-                {/* Full-row hover highlight — spans person column + timeline. */}
-                <div className="pointer-events-none absolute inset-0 bg-foreground/[0.04] opacity-0 transition-opacity group-hover:opacity-100" />
-                {/* Right side — status by default, actions on hover (they swap). */}
-                <div className="absolute right-6 top-1/2 -translate-y-1/2">
-                  {st && (
-                    <span className={cn('text-sm group-hover:hidden', st === 'assigned' ? 'text-badge-success-fg' : 'text-muted-foreground')}>
-                      {st === 'assigned' ? 'Assigned' : 'Proposed'}
-                    </span>
-                  )}
-                  <div className="hidden items-center gap-2 group-hover:flex">
-                    {st === 'assigned' ? (
-                      <button
-                        type="button"
-                        onClick={() => setRemoveCandId(c.id)}
-                        title={`Remove ${c.name}`}
-                        className="flex size-9 items-center justify-center rounded-md bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    ) : st === 'proposed' ? (
-                      <>
-                        <Button variant="outline" size="sm" onClick={() => reject(c.id)} className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive">Reject</Button>
-                        <Button size="sm" onClick={() => setConfirmCand(c)}>Assign</Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button variant="outline" size="sm" onClick={() => propose(c.id)}>Propose</Button>
-                        <Button size="sm" onClick={() => setConfirmCand(c)}>Assign</Button>
-                      </>
-                    )}
+                <span className="relative w-[72px] shrink-0">
+                  <Input
+                    type="number"
+                    min={0}
+                    step={10}
+                    value={reqHours}
+                    onChange={(e) => setReqHours(Math.max(0, Number(e.target.value) || 0))}
+                    className="h-9 pr-6 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">h</span>
+                </span>
+              </div>
+
+              {/* Candidate marker strip + list, wrapped so the allocation-period edge
+                  lines can run continuously down the whole timeline (not broken per row). */}
+              <div className="relative">
+              {/* Allocation-period edges — one full-height overlay across the marker
+                  strip + every candidate row, so the gray guides read as a single line
+                  from the day caps all the way down to the bottom of the list. */}
+              {width > 0 && (() => {
+                const { xForRaw } = makeScale(width, win)
+                const xs = [allocPeriod.startDate, allocPeriod.endDate].map(xForRaw).filter((x) => x >= 0 && x <= width)
+                return (
+                  <div className="pointer-events-none absolute inset-y-0 z-10" style={{ left: 380, right: 0 }}>
+                    {xs.map((x, i) => (
+                      <div key={i} className="absolute inset-y-0 bg-[#9ca3af] dark:bg-[#64748b]" style={{ left: x - 0.5, width: 1 }} />
+                    ))}
                   </div>
+                )
+              })()}
+
+              {/* Candidate marker strip — allocation-period day caps + gray band. */}
+              <div className="flex items-stretch">
+                <div className={cn(LEFT, 'px-6')} />
+                <div className="min-w-0 flex-1">
+                  <TimelineMarkers width={width} win={win} today={today} projectPeriod={projectPeriod} setPeriod={setPeriod} projectEndDate={projectEndDate} showSeatCaps={false} showFlag={false} showTodayDot={false} />
                 </div>
               </div>
-            )
-          })}
-          {listed.length === 0 && <p className="px-6 py-6 text-sm text-muted-foreground">No matching people.</p>}
-        </div>
 
-        {/* Profile split view — sits inside the modal, below the navbar, and
-            pushes the candidate list narrower when open. */}
-        <PersonDetailsSidePanel
-          person={profilePerson}
-          isOpen={!!profileCandId}
-          onClose={() => setProfileCandId(null)}
-        />
+              {/* Candidate list — click a row to select it (footer commits). */}
+              {listed.map((c) => {
+                const isSel = selectedId === c.id
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => setSelectedId((prev) => (prev === c.id ? null : c.id))}
+                    className={cn(
+                      'group relative flex w-full cursor-pointer items-stretch border-b border-border text-left transition-colors',
+                      isSel && 'bg-[#eef1ff]/70 dark:bg-[#18224e]/50',
+                    )}
+                  >
+                    <div className={cn(LEFT, 'flex items-center px-6 py-3')}>
+                      {/* Selection check — only shown once the row is selected;
+                          then it takes the 24px slot and pushes the avatar right
+                          by its width + 16px gap. Unselected rows have none, so
+                          every avatar sits at the 24px left margin. */}
+                      {isSel && (
+                        <span className="mr-4 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                          <Check className="h-3 w-3" />
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setProfileCandId(c.id) }}
+                        aria-label={`View ${c.name}'s profile`}
+                        className="mr-2.5 shrink-0 rounded-full ring-offset-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <img src={c.avatar} alt="" className="size-10 rounded-full object-cover" />
+                      </button>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-base leading-[22px] text-foreground">{c.name}</span>
+                          <UserBadges s={statsFor(c.id)} />
+                        </div>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{c.role}</p>
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <TimelineLane
+                        width={width} win={win} bars={toRowBars(c.bars)} height={64}
+                        today={today} projectPeriod={projectPeriod} setPeriod={setPeriod} projectEndDate={projectEndDate}
+                        allocBox allocBoxFill={isSel} conflict={statsFor(c.id).conflictWeeks > 0}
+                        laneClassName="bg-[#f9fafb] dark:bg-[#0f1729]"
+                        tintClassName={isSel ? 'bg-[#eef1ff]/70 dark:bg-[#18224e]/50' : undefined}
+                      />
+                    </div>
+                    {/* Full-row hover highlight — blue-100 (#DBEAFE) @20% across
+                        the user column + timeline. */}
+                    <div className="pointer-events-none absolute inset-0 bg-[#dbeafe]/20 opacity-0 transition-opacity group-hover:opacity-100 dark:bg-[#1e3a8a]/20" />
+                  </div>
+                )
+              })}
+              {/* No-results state — search filtered every candidate out (Figma
+                  4751-170961). Sits in the 380px candidate column; the timeline
+                  grid + period edges keep running to its right. */}
+              {listed.length === 0 && (
+                <div className={cn(LEFT, 'flex flex-col items-center justify-center gap-6 px-6 py-24 text-center')}>
+                  <div className="flex flex-col items-center gap-4">
+                    <span className="flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                      <Search className="h-6 w-6" />
+                    </span>
+                    <div className="flex flex-col items-center gap-2">
+                      <p className="text-lg font-medium text-foreground">No results found</p>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        No results found for your search.
+                        <br />
+                        Try adjusting your search terms.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              </div>
+            </div>
+
+            {/* Selection footer — the chosen person + Clear / Propose / Assign. */}
+            {selectedCand && (
+              <div className="flex flex-shrink-0 items-center gap-3 border-t border-border bg-[#F3F5FF] px-6 py-4">
+                <img src={selectedCand.avatar} alt="" className="size-9 shrink-0 rounded-full object-cover" />
+                <span className="truncate text-base font-medium text-foreground">{selectedCand.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(null)}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Clear
+                </button>
+                <span className="ml-auto flex items-center gap-3">
+                  {crossesPlan ? (
+                    // Overlap block: no valid action — the message explains the way
+                    // out and a single active "Ok" just dismisses the selection.
+                    <>
+                      <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Info className="h-4 w-4 shrink-0" />
+                        To assign/propose a new person, adjust the date range or remove the current allocation
+                      </span>
+                      <Button variant="outline" onClick={() => setSelectedId(null)}>Ok</Button>
+                    </>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Button variant="outline" onClick={() => propose(selectedCand.id)}>Propose</Button>
+                      <Button onClick={() => setConfirmCand(selectedCand)}>Assign</Button>
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Profile split view. */}
+          <PersonDetailsSidePanel
+            person={profilePerson}
+            isOpen={!!profileCandId}
+            onClose={() => setProfileCandId(null)}
+          />
         </div>
       </DialogContent>
 
@@ -372,20 +739,20 @@ export function AllocationModal({
         onOpenChange={(v) => { if (!v) setConfirmCand(null) }}
         candidate={confirmCand}
         period={confirmCand ? rangeFor(confirmCand.id) : projectPeriod}
-        hoursPerWeek={20}
+        hoursPerWeek={reqHours}
         onPropose={() => { if (confirmCand) propose(confirmCand.id); setConfirmCand(null) }}
         onConfirm={() => { if (confirmCand) assign(confirmCand.id); setConfirmCand(null) }}
       />
 
       {/* Remove confirmation — "Delete Allocation" */}
       {(() => {
-        const c = removeCandId ? CAND_MAP.get(removeCandId) : null
-        if (!c) return null
-        const r = rangeFor(c.id)
+        const c = removePlanId ? CAND_MAP.get(candIdOf(removePlanId)) : null
+        if (!c || !removePlanId) return null
+        const r = rangeFor(removePlanId)
         return (
           <DeleteConfirmDialog
-            open={!!removeCandId}
-            onOpenChange={(v) => { if (!v) setRemoveCandId(null) }}
+            open={!!removePlanId}
+            onOpenChange={(v) => { if (!v) setRemovePlanId(null) }}
             title="Delete Allocation"
             fields={[
               { label: 'Employee', value: c.name },
@@ -395,7 +762,7 @@ export function AllocationModal({
             warning={new Date(r.startDate).getTime() < Date.now()
               ? 'Start date of the allocation is in past. Deleting this allocation may cause unexpected impact on the billing for past billing cycle.'
               : undefined}
-            onConfirm={() => { reject(c.id); setRemoveCandId(null) }}
+            onConfirm={() => { remove(removePlanId); setRemovePlanId(null) }}
           />
         )
       })()}

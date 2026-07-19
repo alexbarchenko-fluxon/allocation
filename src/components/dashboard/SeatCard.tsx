@@ -1,22 +1,18 @@
 import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { SeatState, PersonBadge } from '@/pages/dashboard/data'
+import { PERSON_BADGE_PILL, PERSON_BADGE_STYLE, type SeatState, type PersonBadge } from '@/pages/dashboard/data'
 
 // ── Small role/status pill shown after a person's name ─────────────────────────
 // TA = tentative, NB = non-billable, PA = pending approval. Colours per Figma.
-
-const BADGE_STYLE: Record<PersonBadge, string> = {
-  TA: 'bg-[#e5e7eb] text-[#111827] dark:bg-[#374151] dark:text-white',
-  NB: 'bg-[#e7ebff] text-[#0e35ff] dark:bg-[#1e2a5a] dark:text-[#a5b4ff]',
-  PA: 'bg-[#d1d5db] text-[#111827] dark:bg-[#4b5563] dark:text-white',
-}
 
 export function SeatBadge({ kind }: { kind: PersonBadge }) {
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-full px-1 text-[8px] font-medium leading-4',
-        BADGE_STYLE[kind],
+        PERSON_BADGE_PILL,
+        // Dashboard card tags run at half the canonical pill size.
+        'rounded-[1px] px-1 py-px text-[6px] leading-[8px]',
+        PERSON_BADGE_STYLE[kind],
       )}
     >
       {kind}
@@ -53,7 +49,10 @@ export function SeatCard({
   onClick,
   className,
 }: SeatCardProps) {
-  const isAssign = state !== 'filled'
+  // Filled + proposed both surface a real person (avatar + name); the assign
+  // states show a dashed "+" placeholder instead.
+  const hasPerson = state === 'filled' || state === 'proposed'
+  const isAssign = !hasPerson
   const isOverdue = state === 'overdue'
 
   return (
@@ -62,6 +61,10 @@ export function SeatCard({
         'flex h-12 w-[164px] shrink-0 cursor-pointer items-center gap-1 rounded p-2 transition-colors',
         state === 'filled' &&
           'border border-border bg-background hover:bg-extended-hover',
+        // Proposed / pending approval → purple-50 fill, purple-300 dashed edge
+        // (Figma 4597-27425). Matches the seat-details & timeline proposed tone.
+        state === 'proposed' &&
+          'border border-dashed border-[#d8b4fe] bg-[#faf5ff] hover:brightness-[0.985] dark:border-[#a855f7] dark:bg-[#3b0764]',
         (state === 'upcoming' || state === 'open') &&
           'border border-[color:var(--timeline-misalloc-ooo)] bg-badge-warning hover:brightness-[0.985]',
         state === 'overdue' &&
@@ -71,7 +74,7 @@ export function SeatCard({
       )}
       onClick={onClick}
     >
-      {/* Leading: avatar (filled) or dashed + circle (assign) */}
+      {/* Leading: avatar (filled / proposed) or dashed + circle (assign) */}
       {isAssign ? (
           <span
             className={cn(

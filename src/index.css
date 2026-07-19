@@ -105,10 +105,10 @@
     --badge-neutral-bg:     #f3f4f6;
     --badge-neutral-stroke: #f3f4f6;
     --badge-neutral-fg:     #374151;
-    /* blue — electric-blue/50 bg+stroke, foreground text */
-    --badge-blue-bg:     var(--electric-blue-50);
-    --badge-blue-stroke: var(--electric-blue-50);
-    --badge-blue-fg:     var(--foreground);
+    /* blue (NB) — cyan/50 bg+stroke, cyan/600 text (Figma 4397-35782) */
+    --badge-blue-bg:     #ecfeff;
+    --badge-blue-stroke: #ecfeff;
+    --badge-blue-fg:     #0891b2;
 
     /* Timeline row background — muted at 50 % opacity (Figma: base/muted @ 50 %)
      * Defined as a standalone variable so it can be used via inline style, which
@@ -125,12 +125,16 @@
     --timeline-assigned-fg:       #111827;
     /* misallocation — over- or under-allocated */
     --timeline-misalloc-bg:       #ffedd5;
-    --timeline-misalloc-stroke:   #fed7aa;
-    --timeline-misalloc-fg:       #c2410c;
-    /* unassigned — future gap with no project */
+    --timeline-misalloc-stroke:   #fdba74;
+    --timeline-misalloc-fg:       #111827;
+    /* unassigned — future gap / time conflict (red fill, dark-orange edge) */
     --timeline-unassigned-bg:     #fee2e2;
-    --timeline-unassigned-stroke: #fecaca;
-    --timeline-unassigned-fg:     #b91c1c;
+    --timeline-unassigned-stroke: #c2410c;
+    --timeline-unassigned-fg:     #111827;
+    /* timeline guide lines (Figma 4397-33476) */
+    --timeline-today:             #7e22ce;   /* purple-700 today marker  */
+    --timeline-project-end:       #d1d5db;   /* gray-300 project-ends    */
+    --timeline-seat-edge:         #0e35ff;   /* indigo seat band edges   */
     /* OOO diagonal stripe colour — per block-type (Figma tokens) */
     --timeline-ooo-stripe:           #d1d5db;   /* legacy fallback */
     --timeline-assigned-ooo:         #d1d5db;   /* gray-300  */
@@ -171,6 +175,10 @@
     --timeline-unassigned-bg:     #dc2626;
     --timeline-unassigned-stroke: #dc2626;
     --timeline-unassigned-fg:     #f9fafb;
+    /* timeline guide lines — dark */
+    --timeline-today:             #c084fc;   /* purple-400 */
+    --timeline-project-end:       #6b7280;   /* gray-500   */
+    --timeline-seat-edge:         #6e86ff;
     --timeline-ooo-stripe:           rgba(255,255,255,0.20);  /* legacy fallback */
     --timeline-assigned-ooo:         rgba(255,255,255,0.22);
     --timeline-misalloc-ooo:         #fb923c;   /* orange-400 */
@@ -230,10 +238,10 @@
     --badge-neutral-bg:     #374151;
     --badge-neutral-stroke: #374151;
     --badge-neutral-fg:     #ffffff;
-    /* blue — electric-blue/100 bg+stroke, accent-foreground-light text */
-    --badge-blue-bg:     oklch(0.920 0.035 265);
-    --badge-blue-stroke: oklch(0.920 0.035 265);
-    --badge-blue-fg:     oklch(0.210 0.032 264.665);
+    /* blue (NB) — cyan/50 bg+stroke, cyan/600 text (Figma 4397-35782) */
+    --badge-blue-bg:     #ecfeff;
+    --badge-blue-stroke: #ecfeff;
+    --badge-blue-fg:     #0891b2;
 
     /* Extended hover — Mode token: dark mode uses dark alias */
     --extended-hover: var(--extended-hover-dark);
