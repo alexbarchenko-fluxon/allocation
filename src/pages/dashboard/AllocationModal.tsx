@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { DraftingCompass, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Trash2, Check, Info } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Trash2, Check, Info } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -485,9 +485,6 @@ export function AllocationModal({
       <DialogContent className="flex h-[calc(100vh-40px)] max-h-[1040px] w-[calc(100vw-40px)] max-w-[1880px] flex-col gap-0 overflow-hidden p-0">
         {/* Navbar */}
         <div className="flex h-[64px] flex-shrink-0 items-center gap-3 border-b border-border px-6">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-            <DraftingCompass className="h-5 w-5" />
-          </span>
           <DialogTitle className="flex items-center gap-2 text-base font-semibold">
             {seat.role} Seat
             {project && (
