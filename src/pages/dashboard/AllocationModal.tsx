@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Trash2, Check, Info } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Check, Info } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +10,6 @@ import { useTrackWidth } from './useTrackWidth'
 import { fmtDate, weeksBetween, daysBetween } from './format'
 import { MODAL_CANDIDATES, DASH_PERSON_MAP, PERSON_BADGE_PILL, PERSON_BADGE_STYLE, type Seat, type DashProject, type ModalCandidate, type CandidateBar, type SeatAllocation, type AllocConflict } from './data'
 import { NewAllocationDialog } from './NewAllocationDialog'
-import { DeleteConfirmDialog } from './DeleteConfirmDialog'
 import { cn } from '@/lib/utils'
 
 const LEFT = 'w-[380px] shrink-0'
@@ -225,8 +224,6 @@ export function AllocationModal({
   const [planOpen, setPlanOpen] = useState(false)
   // Candidate awaiting the "New Allocation" confirmation (null = dialog closed).
   const [confirmCand, setConfirmCand] = useState<ModalCandidate | null>(null)
-  // Plan entry (instance id) awaiting the "Delete Allocation" confirmation.
-  const [removePlanId, setRemovePlanId] = useState<string | null>(null)
   // Monotonic counter minting unique plan-entry ids ("candId#n").
   const planSeq = useRef(0)
 
@@ -267,7 +264,7 @@ export function AllocationModal({
     setOrder(ids.reverse())   // most-recent first, matching `allocate`
     setQuery(''); setShift(0)
     setSelectedId(null); setPlanOpen(false)
-    setConfirmCand(null); setRemovePlanId(null)
+    setConfirmCand(null)
     setAllocPeriod({ startDate: seat.startDate, endDate: seat.endDate })
     setReqHours(DEFAULT_REQ_HOURS)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -353,12 +350,6 @@ export function AllocationModal({
   }
   const propose = (id: string) => allocate(id, 'proposed')
   const assign = (id: string) => allocate(id, 'assigned')
-  const remove = (id: string) => {
-    setStatus((s) => { const n = { ...s }; delete n[id]; return n })
-    setOrder((o) => o.filter((x) => x !== id))
-    setRanges((r) => { const n = { ...r }; delete n[id]; return n })
-    setSeed((s) => { const n = { ...s }; delete n[id]; return n })
-  }
   const onBarChange = (id: string, next: Period) => setRanges((r) => ({ ...r, [id]: next }))
 
   // The active assigned entry = earliest-starting one that hasn't ended. Reads as
@@ -554,15 +545,6 @@ export function AllocationModal({
         </div>
         {/* Full-row hover highlight — same blue-100 @20% as the candidate rows. */}
         <div className="pointer-events-none absolute inset-0 bg-[#dbeafe]/20 opacity-0 transition-opacity group-hover:opacity-100 dark:bg-[#1e3a8a]/20" />
-        {/* Remove this person from the plan (on hover). */}
-        <button
-          type="button"
-          onClick={() => setRemovePlanId(id)}
-          title={`Remove ${p.name}`}
-          className="absolute right-6 top-1/2 hidden size-9 -translate-y-1/2 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-extended-hover group-hover:flex"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
       </div>
     )
   }
@@ -820,29 +802,6 @@ export function AllocationModal({
         onPropose={() => { if (confirmCand) propose(confirmCand.id); setConfirmCand(null) }}
         onConfirm={() => { if (confirmCand) assign(confirmCand.id); setConfirmCand(null) }}
       />
-
-      {/* Remove confirmation — "Delete Allocation" */}
-      {(() => {
-        if (!removePlanId) return null
-        const p = planPersonOf(removePlanId)
-        const r = rangeFor(removePlanId)
-        return (
-          <DeleteConfirmDialog
-            open={!!removePlanId}
-            onOpenChange={(v) => { if (!v) setRemovePlanId(null) }}
-            title="Delete Allocation"
-            fields={[
-              { label: 'Employee', value: p.name },
-              { label: 'Allocation role', value: p.role },
-              { label: 'Start-End date', value: `${fmtDate(r.startDate)} – ${fmtDate(r.endDate)}` },
-            ]}
-            warning={new Date(r.startDate).getTime() < Date.now()
-              ? 'Start date of the allocation is in past. Deleting this allocation may cause unexpected impact on the billing for past billing cycle.'
-              : undefined}
-            onConfirm={() => { remove(removePlanId); setRemovePlanId(null) }}
-          />
-        )
-      })()}
     </Dialog>
   )
 }
