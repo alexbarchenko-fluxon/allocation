@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   X, Trash2, NotepadText, ChevronDown, Plus, Users,
-  FlagTriangleRight, Lightbulb, History,
+  FlagTriangleRight, Lightbulb, History, DraftingCompass,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -138,6 +138,7 @@ function PersonHead({
           {nameTag}
         </span>
         <span className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <DraftingCompass className="h-3.5 w-3.5 shrink-0" />
           {person.role}
         </span>
       </div>

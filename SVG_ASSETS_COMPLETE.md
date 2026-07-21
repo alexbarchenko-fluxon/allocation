@@ -10,7 +10,7 @@ All SVG assets from Figma have been successfully integrated into the project!
   - Used in: `MainNavLogo` component
   - Size: 315KB (includes complex animations and gradients)
 
-- ✅ **allox-text.svg** - The "Alox" text logo (42x16px)
+- ✅ **allox-text.svg** - The "Allox" text logo (42x16px)
   - Location: `src/assets/logos/allox-text.svg`
   - Used in: `MainNavLogo` component
   - Simple text SVG for the brand name
@@ -98,7 +98,7 @@ The `?react` suffix tells Vite to convert the SVG into a React component.
 ## Visual Results
 
 The navigation now displays:
-- **Left side:** Animated Allox icon + "Alox" text
+- **Left side:** Animated Allox icon + "Allox" text
 - **Center:** Navigation buttons (Dashboard, Deals, People, Accounts, Stats)
 - **Right side:** Theme toggle, App switcher (with Lux/Fox/Spark logos), User avatar
 

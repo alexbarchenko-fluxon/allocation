@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Search, ArrowDownAZ, ArrowUpAZ, Building2, Eye, EyeOff } from 'lucide-react'
+import { Search, Plus, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { InputGroup } from '@/components/ui/input-group'
 import { FilterMultiSelect } from '@/components/ui/filter-multiselect'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
@@ -10,7 +9,7 @@ import { SeatCard } from '@/components/dashboard/SeatCard'
 import { SeatDetailsPanel } from '@/pages/dashboard/SeatDetailsPanel'
 import { AllocationModal } from '@/pages/dashboard/AllocationModal'
 import {
-  DASH_PROJECTS, DASH_PERSON_MAP, openingsFor, shortRole,
+  DASH_PROJECTS, DASH_PERSON_MAP, openingsFor, startingSoonFor, shortRole,
   DEMO_PROJECT_NAMES, DEMO_CLIENTS,
   type Seat, type SeatState, type DashProject, type SeatAllocation, type Dept,
 } from '@/pages/dashboard/data'
@@ -134,7 +133,6 @@ export default function DashboardPage() {
   const [seatRole, setSeatRole] = useState<string[]>([])
   const [seatType, setSeatType] = useState<string[]>([])
   const [allocation, setAllocation] = useState<string[]>([])
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   // "Show all projects seats" — reveals every seat on matching projects instead
   // of only the seats matching the active seat filters.
   const [showAllSeats, setShowAllSeats] = useState(false)
@@ -191,12 +189,9 @@ export default function DashboardPage() {
       })
       .filter((r) => (seatFilterActive ? r.matchCount > 0 : true))
 
-    result.sort((a, b) => {
-      const cmp = a.project.name.localeCompare(b.project.name)
-      return sortDir === 'asc' ? cmp : -cmp
-    })
+    result.sort((a, b) => a.project.name.localeCompare(b.project.name))
     return result
-  }, [search, client, seatMatches, seatFilterActive, showAll, sortDir, deletedSeats])
+  }, [search, client, seatMatches, seatFilterActive, showAll, deletedSeats])
 
   const visibleProjects = rows.map((r) => r.project)
   const seatsByDept = (seats: Seat[], dept: Dept) => seats.filter((s) => s.dept === dept)
@@ -276,24 +271,32 @@ export default function DashboardPage() {
 
         {/* Body */}
         <div className="scrollbar-minimal min-h-0 flex-1 overflow-y-auto">
-          {/* Sticky column headers */}
-          <div className="sticky top-0 z-10 flex h-10 border-y border-border bg-background">
-            <div className="flex w-[320px] flex-shrink-0 items-center justify-between border-r border-border px-2">
-              <Badge variant="secondary" className="gap-1 rounded-full border-transparent px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                <Building2 className="h-3 w-3" />
-                {rows.length}
-              </Badge>
-              <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))} aria-label="Sort">
-                {sortDir === 'asc' ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
-              </Button>
+          {/* Sticky column headers — muted band: "Accounts (N)" + add, dept openings */}
+          <div className="sticky top-0 z-10 flex h-12 border-y border-border bg-muted">
+            <div className="flex w-[320px] flex-shrink-0 items-center justify-between border-r border-border px-6">
+              <span className="text-sm font-semibold tracking-[0.14px] text-[#414b5c] dark:text-slate-300">
+                Accounts ({rows.length})
+              </span>
+              <button
+                type="button"
+                aria-label="Add account"
+                className="text-primary transition-colors hover:text-primary/80"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
             </div>
             <div className="flex min-w-0 flex-1">
-              {DEPTS.map((dept, i) => (
-                <div key={dept} className={cn('flex flex-1 items-center gap-2 px-4', i === 0 && 'border-r border-border')}>
-                  <span className="text-xs font-semibold leading-4 text-foreground">{dept}</span>
-                  <span className="text-xs text-muted-foreground">| {openingsFor(visibleProjects, dept)} Openings</span>
-                </div>
-              ))}
+              {DEPTS.map((dept, i) => {
+                const soon = startingSoonFor(visibleProjects, dept)
+                return (
+                  <div key={dept} className={cn('flex flex-1 items-center gap-1.5 px-6', i === 0 && 'border-r border-border')}>
+                    <span className="text-sm font-semibold tracking-[0.14px] text-[#414b5c] dark:text-slate-300">{dept}</span>
+                    <span className="text-sm tracking-[0.14px] text-[#414b5c] dark:text-slate-300">
+                      | {openingsFor(visibleProjects, dept)} Openings{soon > 0 && ` (${soon} start soon)`}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
@@ -362,6 +365,7 @@ export default function DashboardPage() {
           onOpenChange={setModalOpen}
           seat={selectedSeat}
           project={selectedProject}
+          allocations={selectedAllocs}
         />
       )}
     </div>

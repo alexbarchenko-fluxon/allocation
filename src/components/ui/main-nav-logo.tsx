@@ -13,7 +13,7 @@ export function MainNavLogo({ className }: MainNavLogoProps) {
       className={`flex items-center gap-2.5 ${className || ''}`}
     >
       <AlloxIcon className="w-[34px] h-[34px] shrink-0" />
-      <AlloxText className="w-[42px] h-[16px] shrink-0" />
+      <AlloxText className="w-[46px] h-[16px] shrink-0" />
     </Link>
   )
 }

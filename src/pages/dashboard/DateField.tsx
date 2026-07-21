@@ -27,8 +27,17 @@ function dateToIso(date: Date): string {
  * out of the box; pass `onChange` to also lift the new ISO value to a parent.
  */
 export function DateField({
-  iso, className, onChange, icon = true,
-}: { iso: string; className?: string; onChange?: (iso: string) => void; icon?: boolean }) {
+  iso, className, onChange, icon = true, min, max,
+}: {
+  iso: string
+  className?: string
+  onChange?: (iso: string) => void
+  icon?: boolean
+  /** Earliest selectable day (inclusive) — days before it are disabled. */
+  min?: string
+  /** Latest selectable day (inclusive) — days after it are disabled. */
+  max?: string
+}) {
   const [value, setValue] = useState(iso)
   // Reset when the seed changes (e.g. the panel switches to another seat) —
   // derived-state-during-render pattern, no effect needed.
@@ -40,6 +49,13 @@ export function DateField({
 
   const [open, setOpen] = useState(false)
   const selected = isoToDate(value)
+
+  // Clamp the calendar to [min, max] — days outside the seat window are greyed
+  // out and unselectable (react-day-picker `before`/`after` matchers).
+  const disabled = [
+    ...(min ? [{ before: isoToDate(min) }] : []),
+    ...(max ? [{ after: isoToDate(max) }] : []),
+  ]
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -60,6 +76,7 @@ export function DateField({
           mode="single"
           selected={selected}
           defaultMonth={selected}
+          disabled={disabled.length ? disabled : undefined}
           onSelect={(date) => {
             if (!date) return
             const next = dateToIso(date)

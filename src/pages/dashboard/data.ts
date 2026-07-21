@@ -125,7 +125,8 @@ export interface DashProject {
   client: string
   name: string
   dates: string
-  contractType: 'T&M' | 'Fixed'
+  /** Contract tag — omit to render the card without a tag. */
+  contractType?: 'T&M' | 'Fixed'
   variant: 'default' | 'soon' | 'ending'
   notesCount?: number
   seats: Seat[]
@@ -392,29 +393,6 @@ export const MODAL_CANDIDATES: ModalCandidate[] = [
   },
 ]
 
-// Maps each prototype candidate to a real `MOCK_PEOPLE` id so the profile
-// side panel can resolve manager / direct reports / allocations. All engineers
-// (person-6…person-23). Prototype-only; names in the panel are the real person's.
-export const CANDIDATE_PERSON_MAP: Record<string, string> = {
-  'c-maya-r':   'person-6',
-  'c-aisha-n':  'person-7',
-  'c-james-t':  'person-23',
-  'c-sofia-l':  'person-12',
-  'c-priya-k':  'person-10',
-  'c-carlos-m': 'person-9',
-  'c-noah-b':   'person-11',
-  'c-elena-v':  'person-14',
-  'c-ravi-p':   'person-15',
-  'c-tara-s':   'person-16',
-  'c-omar-h':   'person-18',
-  'c-lena-k':   'person-19',
-  'c-victor-s': 'person-20',
-  'c-grace-l':  'person-22',
-  'c-david-m':  'person-13',
-  'c-hana-t':   'person-17',
-  'c-peter-w':  'person-21',
-}
-
 /** Candidate pool for the modal's "New Allocations" search list. */
 export const DESIGN_SEAT_CANDIDATES: string[] = [
   'p-maya', 'p-marcus', 'p-sofia', 'p-liam', 'p-nina',
@@ -431,7 +409,9 @@ function seatDates(id: string): Pick<Seat, 'startDate' | 'endDate'> {
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
   const pad = (n: number) => String(n).padStart(2, '0')
   const startDay = 2 + (h % 25)          // 02–26
-  const endDay = 2 + ((h >> 5) % 26)     // 02–27
+  // Unsigned shift: `h >> 5` would go negative when h's high bit is set, and a
+  // negative `% 26` yields a negative day → invalid ISO dates ("2026-11--13").
+  const endDay = 2 + ((h >>> 5) % 26)    // 02–27
   return { startDate: `2026-06-${pad(startDay)}`, endDate: `2026-11-${pad(endDay)}` }
 }
 
@@ -497,7 +477,7 @@ export const DASH_PROJECTS: DashProject[] = [
   },
   {
     id: 'pr-google-campus-3', client: 'Google', name: 'Google Campus Planning 2025',
-    dates: "Aug 01 – Nov 02 '25", contractType: 'Fixed', variant: 'default', notesCount: 2,
+    dates: "Aug 01 – Nov 02 '25", variant: 'default', notesCount: 2,
     seats: [
       filled('s-g3-p1', 'Design', 'Designer', 'Product and Design', 'p-priya', { startsLabel: '7/12' }),
       filled('s-g3-e1', 'Eng', 'Engineer', 'Engineering', 'p-aisha', { startsLabel: '7/12' }),
@@ -556,6 +536,14 @@ export function shortRole(role: string): string {
 export function openingsFor(projects: DashProject[], dept: Dept): number {
   return projects.reduce(
     (n, p) => n + p.seats.filter((s) => s.dept === dept && s.state !== 'filled').length,
+    0,
+  )
+}
+
+/** Openings that start soon — unfilled seats with a scheduled upcoming start. */
+export function startingSoonFor(projects: DashProject[], dept: Dept): number {
+  return projects.reduce(
+    (n, p) => n + p.seats.filter((s) => s.dept === dept && s.state === 'upcoming').length,
     0,
   )
 }

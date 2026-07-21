@@ -1,4 +1,4 @@
-import { NotepadText } from 'lucide-react'
+import { Plus, MessageSquareText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type AccountCardVariant = 'default' | 'soon' | 'ending'
@@ -8,7 +8,8 @@ export interface AccountCardProps {
   client: string
   name: string
   dates: string
-  contractType: ContractType
+  /** Contract tag (T&M / Fixed). Omit to render the card without a tag. */
+  contractType?: ContractType
   variant?: AccountCardVariant
   notesCount?: number
   className?: string
@@ -30,7 +31,7 @@ export function AccountCard({
   return (
     <div
       className={cn(
-        'h-full flex bg-background hover:bg-extended-hover cursor-pointer transition-colors',
+        'group h-full flex bg-background hover:bg-extended-hover cursor-pointer transition-colors',
         className,
       )}
       onClick={onClick}
@@ -48,40 +49,41 @@ export function AccountCard({
 
         {/* Top section */}
         <div className="flex flex-col gap-1">
-          <p className="text-xs text-muted-foreground leading-4">{client}</p>
-          <p className="text-base font-medium text-foreground leading-6 truncate">{name}</p>
-          <p className="text-xs text-muted-foreground leading-4 py-1">{dates}</p>
-        </div>
-
-        {/* Bottom: badges + notes */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {/* Contract type: T&M or Fixed */}
-            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-accent text-accent-foreground">
-              {contractType}
-            </span>
-
-            {/* Timeline status badge */}
-            {variant === 'soon' && (
-              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-badge-warning text-badge-warning-fg border border-badge-warning-stroke">
-                Starting Soon
-              </span>
-            )}
-            {variant === 'ending' && (
-              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-badge-warning text-badge-warning-fg border border-badge-warning-stroke">
-                Ending Soon
-              </span>
-            )}
+          {/* Client + add position */}
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-xs font-medium text-muted-foreground leading-4">{client}</p>
+            <button
+              type="button"
+              aria-label="Add position"
+              onClick={(e) => e.stopPropagation()}
+              className="-my-1 shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
           </div>
 
-          {/* Notes count */}
-          {notesCount !== undefined && notesCount > 0 && (
-            <div className="flex items-center gap-1.5 pl-6 pr-2 py-1.5 opacity-50">
-              <NotepadText className="h-5 w-5 text-muted-foreground" />
-              <span className="text-xs font-medium text-muted-foreground">{notesCount}</span>
+          <p className="text-base font-medium text-foreground leading-6 truncate">{name}</p>
+          <p className="text-xs text-muted-foreground leading-4 py-1">{dates}</p>
+
+          {/* Contract type — shown on some cards only (indigo info badge) */}
+          {contractType && (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                {contractType}
+              </span>
             </div>
           )}
         </div>
+
+        {/* Notes count — pinned bottom-right */}
+        {notesCount !== undefined && notesCount > 0 && (
+          <div className="flex justify-end">
+            <div className="flex items-center gap-1 rounded bg-blue-50 pl-1 pr-1.5 py-1 dark:bg-blue-950">
+              <MessageSquareText className="h-3.5 w-3.5 text-blue-600 dark:text-blue-300" />
+              <span className="text-[10px] font-medium text-blue-600 dark:text-blue-300">{notesCount}</span>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

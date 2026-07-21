@@ -10,8 +10,8 @@ export function SeatBadge({ kind }: { kind: PersonBadge }) {
     <span
       className={cn(
         PERSON_BADGE_PILL,
-        // Dashboard card tags run at half the canonical pill size.
-        'rounded-[1px] px-1 py-px text-[6px] leading-[8px]',
+        // Dashboard card tags run at three-quarters of the canonical pill size.
+        'rounded-[2px] px-1.5 py-0.5 text-[9px] leading-[12px]',
         PERSON_BADGE_STYLE[kind],
       )}
     >
